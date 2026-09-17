@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><NFe xmlns="http://www.portalfiscal.inf.br/nfe"><infNFe Id="NFe21241127095555000200550010001677091276507032" versao="4.00"><ide><cUF>21</cUF><cNF>27650703</cNF><natOp>BONIFICA??O/DOA??O/BRINDE</natOp><mod>55</mod><serie>1</serie><nNF>167709</nNF><dhEmi>2024-11-13T15:14:07-03:00</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>2111300</cMunFG><tpImp>1</tpImp><tpEmis>1</tpEmis><cDV>2</cDV><tpAmb>1</tpAmb><finNFe>1</finNFe><indFinal>0</indFinal><indPres>3</indPres><indIntermed>0</indIntermed><procEmi>0</procEmi><verProc>Oobj-DFe</verProc></ide><emit><CNPJ>27095555000200</CNPJ><xNome>LYNKZ DISTRIBUIDORA SA</xNome><enderEmit><xLgr>ROD BR 135 AV ENGEMILIANO MACIEIRA</xLgr><nro>116</nro><xBairro>TIBIRI</xBairro><cMun>2111300</cMun><xMun>SAO LUIS</xMun><UF>MA</UF><CEP>65095601</CEP><cPais>1058</cPais><xPais>BRASIL</xPais><fone>9832489555</fone></enderEmit><IE>126997586</IE><CRT>3</CRT></emit><dest><CNPJ>49893164000184</CNPJ><xNome>W S FURTADO COMERCIO</xNome><enderDest><xLgr>R CEARA</xLgr><nro>751</nro><xBairro>CENTRO</xBairro><cMun>2105302</cMun><xMun>IMPERATRIZ</xMun><UF>MA</UF><CEP>65901610</CEP><cPais>1058</cPais><xPais>BRASIL</xPais><fone>99985496005</fone></enderDest><indIEDest>1</indIEDest><IE>127965122</IE></dest><det nItem="1"><prod><cProd>504416</cProd><cEAN>7898195862755</cEAN><xProd>OMEGA 3 DOG 1000MG 030056</xProd><NCM>21069030</NCM><CFOP>5910</CFOP><uCom>UN</uCom><qCom>1.0000</qCom><vUnCom>72.7400000000</vUnCom><vProd>72.74</vProd><cEANTrib>7898195862755</cEANTrib><uTrib>UN</uTrib><qTrib>1.0000</qTrib><vUnTrib>72.7400000000</vUnTrib><indTot>1</indTot></prod><imposto><vTotTrib>23.34</vTotTrib><ICMS><ICMS20><orig>0</orig><CST>20</CST><modBC>3</modBC><pRedBC>45.45</pRedBC><vBC>39.68</vBC><pICMS>22.00</pICMS><vICMS>8.73</vICMS></ICMS20></ICMS><IPI><cEnq>999</cEnq><IPITrib><CST>99</CST><vBC>0.00</vBC><pIPI>0.00</pIPI><vIPI>0.00</vIPI></IPITrib></IPI><II><vBC>0.00</vBC><vDespAdu>0.00</vDespAdu><vII>0.00</vII><vIOF>0.00</vIOF></II><PIS><PISOutr><CST>99</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISOutr></PIS><COFINS><COFINSOutr><CST>99</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS></imposto><infAdProd>CX</infAdProd></det><total><ICMSTot><vBC>39.68</vBC><vICMS>8.73</vICMS><vICMSDeson>0.00</vICMSDeson><vFCPUFDest>0.00</vFCPUFDest><vFCP>0.00</vFCP><vBCST>0.00</vBCST><vST>0.00</vST><vFCPST>0.00</vFCPST><vFCPSTRet>0.00</vFCPSTRet><vProd>72.74</vProd><vFrete>0.00</vFrete><vSeg>0.00</vSeg><vDesc>0.00</vDesc><vII>0.00</vII><vIPI>0.00</vIPI><vIPIDevol>0.00</vIPIDevol><vPIS>0.00</vPIS><vCOFINS>0.00</vCOFINS><vOutro>0.00</vOutro><vNF>72.74</vNF><vTotTrib>23.34</vTotTrib></ICMSTot></total><transp><modFrete>9</modFrete><vol><qVol>1</qVol><esp>Volume</esp><pesoL>0.030</pesoL><pesoB>0.030</pesoB></vol></transp><pag><detPag><indPag>0</indPag><tPag>90</tPag><vPag>0.00</vPag></detPag></pag><infAdic><infCpl>Prenota:178204A Val Aprox dos Tributos R$ 23.34 32.09 Fonte:IBPT</infCpl></infAdic></infNFe><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFe21241127095555000200550010001677091276507032"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>EenvBLBYdFBNGvq69MKk99iI9xk=</DigestValue></Reference></SignedInfo><SignatureValue>NOzZ+vBJ5F0U2HhXxKddWUyX29ziCQ1TMSUW0TeYYD8azPn/HeEmsMoPkOxLcsauLNKu2TKCRqRd
+aJE9iJrnZw+vu97lxcR5f9i9Lz4358BZH5DegwCo+0SpXaYBiuZ+LfMAdZ7+zH9VAHSNTek0kpLI
+sOunJmWSjwII5n2mOwaJQ21A4ytg8JHN/KvTG/lRwKz8ey9GvThnbpKCdOCpOb1qB9naCzdZab0F
+z7BLrbd8JE/Y6uhQy1URi5heLmkXwvi3ESB6cA0A99KB5rgbLH2rWT8lRHlUVNLgiuSZ6u59CGLL
+GbUqY/hpdrNteCPGVfMHlB4ObpNIVUrPUXAdTA==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIHPTCCBSWgAwIBAgIIWUkkASZGhY4wDQYJKoZIhvcNAQELBQAwWTELMAkGA1UEBhMCQlIxEzAR
+BgNVBAoTCklDUC1CcmFzaWwxFTATBgNVBAsTDEFDIFNPTFVUSSB2NTEeMBwGA1UEAxMVQUMgU09M
+VVRJIE11bHRpcGxhIHY1MB4XDTI0MDEyOTE4MjAwMFoXDTI1MDEyODE4MjAwMFowgd4xCzAJBgNV
+BAYTAkJSMRMwEQYDVQQKEwpJQ1AtQnJhc2lsMQswCQYDVQQIEwJNQTERMA8GA1UEBxMIU2FvIEx1
+aXMxHjAcBgNVBAsTFUFDIFNPTFVUSSBNdWx0aXBsYSB2NTEXMBUGA1UECxMOMjkxNjMxNzAwMDAx
+NzkxEzARBgNVBAsTClByZXNlbmNpYWwxGjAYBgNVBAsTEUNlcnRpZmljYWRvIFBKIEExMTAwLgYD
+VQQDEydMWU5LWiBESVNUUklCVUlET1JBIFMuQS46MjcwOTU1NTUwMDAxMTAwggEiMA0GCSqGSIb3
+DQEBAQUAA4IBDwAwggEKAoIBAQCqeSuLB5KNGsjV9XsFEZTt1ZjmcmPuCem17+D4oNtUdrY1rrNH
+lFolPXUi9zT2LIuGNfY7URdZ05hBjDwBj57qENfhP03NWhMMwJc5tN0xQ2Pgv3zWvtIXZR/adCUC
+H1Rs3zt+axNoxguayYLgWIZFymGH6RN9gVAq3vTP0ZvJT5jKN0xVC8CDDatysLIn1bP26pYN4Ih5
+Cd7kTbIcG1SDx5ukimoCebOB4nqBP1tKNb/CWSJ0NwviF3RWoNzdXNJ2Jn8RPtdeV3JoFUKy0L2B
+MbReNb1EfEOTx6d3rR3A4mEtv7aKTSEPJ7UhruvOHNmCybOQ+e+TWnrLUJ8jizflAgMBAAGjggKB
+MIICfTAJBgNVHRMEAjAAMB8GA1UdIwQYMBaAFMVS7SWACd+cgsifR8bdtF8x3bmxMFQGCCsGAQUF
+BwEBBEgwRjBEBggrBgEFBQcwAoY4aHR0cDovL2NjZC5hY3NvbHV0aS5jb20uYnIvbGNyL2FjLXNv
+bHV0aS1tdWx0aXBsYS12NS5wN2IwgbwGA1UdEQSBtDCBsYEVc3VlbHlAdGVycmF6b28uY29tLmJy
+oCUGBWBMAQMCoBwTGk1BUkNJTyBKT1JHRSBWSUVJUkEgQlJBU0lMoBkGBWBMAQMDoBATDjI3MDk1
+NTU1MDAwMTEwoD0GBWBMAQMEoDQTMjE1MDExOTc0NTI5MjAyNDAzMTUwMDAwMDAwMDAwMDAwMDAw
+MDAwMTM0MDQxOVNTUE1BoBcGBWBMAQMHoA4TDDAwMDAwMDAwMDAwMDBdBgNVHSAEVjBUMFIGBmBM
+AQIBJjBIMEYGCCsGAQUFBwIBFjpodHRwOi8vY2NkLmFjc29sdXRpLmNvbS5ici9kb2NzL2RwYy1h
+Yy1zb2x1dGktbXVsdGlwbGEucGRmMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcDBDCBjAYD
+VR0fBIGEMIGBMD6gPKA6hjhodHRwOi8vY2NkLmFjc29sdXRpLmNvbS5ici9sY3IvYWMtc29sdXRp
+LW11bHRpcGxhLXY1LmNybDA/oD2gO4Y5aHR0cDovL2NjZDIuYWNzb2x1dGkuY29tLmJyL2xjci9h
+Yy1zb2x1dGktbXVsdGlwbGEtdjUuY3JsMB0GA1UdDgQWBBQS03yKPXZ+jeiKfvhIQb8vJMnNlzAO
+BgNVHQ8BAf8EBAMCBeAwDQYJKoZIhvcNAQELBQADggIBAH5boq/7CO4Cah3iR6vL9yuxsDdcYrtS
+NEtSI5EZS4Yne6zNywbOUL1BgaZcZHu2FbgEqERNbvO0hS6aqy25bKVhJBaIDFVmRMQ4LEzy8tXd
+4wnDIUnJfKDnsB0rx9kH9fzquLi4FPNcxnwN5yvz/+7utcpQUSXI3/hl1KipF2Sf+KyK4vK894eS
+UwIb/W2hR4+CH9f7NVb9B/2028jLOOv/B5JAnArSQIZxJCrPGF+7cx4Y3y8E6ex6MH9HopyQJzXZ
+/dV1CKNHKsE+gK52iYhO2/E+6fLFO3sUAaDR/HF5s1TPoPF1tKNAZqfUM5gl/2lxiu3qPsjhVlLR
+E7OUWVh8XQn+Yo//iw8v3dxcSsjwGVJea3XXf6Pgmw3Z3pf46CkMF9erV73BiS582ScMf90lVzmw
+BGHXXS+2uDCeqGmwQQKgMjLlzw/uGxViu8dZBLklzgLzxY1pLzxjuOZ9pOpYOtY2Xi56fUM3Y6sl
+1S3E8NyKqegaodGdcLRIPp2sgxQD71Zv2lJx/N+z9tu8jT21TugAdQoDCIYnktbHsde1wWGn2OJB
+gGEgzwl1Qg72FXriYFJvBqdvdohTMCY00rU1FgzU8yRSFAlT1D9Hnms6DOh7hNUqBsbgaZ+91rO/
+8Z+I+sHKWsEGsN+y1dQXCPzTAYqIoTc9yx14rLhlHoyF</X509Certificate></X509Data></KeyInfo></Signature></NFe><protNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><infProt Id="ID421240040652694"><tpAmb>1</tpAmb><verAplic>SVAN_2.1.11</verAplic><chNFe>21241127095555000200550010001677091276507032</chNFe><dhRecbto>2024-11-13T15:14:11-03:00</dhRecbto><nProt>421240040652694</nProt><digVal>EenvBLBYdFBNGvq69MKk99iI9xk=</digVal><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe></nfeProc>

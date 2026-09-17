@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/productcatalogue",
+    "description": "",
+    "authors": [
+        {
+            "name": "LojaDev",
+            "email": "contato@lojadodesenvolvedor.com.br"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\ProductCatalogue\\Providers\\ProductCatalogueServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\ProductCatalogue\\": ""
+        }
+    }
+}

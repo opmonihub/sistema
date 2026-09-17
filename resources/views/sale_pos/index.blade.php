@@ -1,0 +1,95 @@
+@extends('layouts.app')
+@section('title', __( 'sale.list_pos'))
+
+@section('content')
+
+<!-- Content Header (Page header) -->
+<section class="content-header no-print">
+    <h1>PDV
+    </h1>
+</section>
+
+<!-- Main content -->
+<section class="content no-print">
+    @component('components.filters', ['title' => __('report.filters')])
+    @include('sell.partials.sell_list_filters')
+    @endcomponent
+
+    @component('components.widget', ['class' => 'box-primary', 'title' => 'Lista de PDV'])
+    @can('sell.create')
+    @slot('tool')
+    <div class="box-tools">
+        <a class="btn btn-block btn-primary" href="{{action('SellPosController@create')}}">
+            <i class="fa fa-plus"></i> @lang('messages.add')
+        </a>
+    </div>
+
+    @if($contigencia != null)
+    <h3 class="text-danger">Contigência ativada</h3>
+    <p class="text-danger">Tipo: {{$contigencia->tipo}}</p>
+    <p class="text-danger">Data de ínicio: {{ \Carbon\Carbon::parse($contigencia->created_at)->format('d/m/Y H:i') }}</p>
+    @endif
+
+    @if($certificado != null)
+    <button class="btn btn-warning float-right spinner-right btn-consulta-status">
+        Consultar Status Sefaz
+    </button>
+    @endif
+    @endslot
+
+    @endcan
+    @can('sell.view')
+    @include('sale_pos.partials.sales_table')
+    @endcan
+    @endcomponent
+</section>
+<!-- /.content -->
+<div class="modal fade payment_modal" tabindex="-1" role="dialog" 
+aria-labelledby="gridSystemModalLabel">
+</div>
+
+<div class="modal fade edit_payment_modal" tabindex="-1" role="dialog" 
+aria-labelledby="gridSystemModalLabel">
+</div>
+
+<div class="modal fade register_details_modal" tabindex="-1" role="dialog" 
+aria-labelledby="gridSystemModalLabel">
+</div>
+<div class="modal fade close_register_modal" tabindex="-1" role="dialog" 
+aria-labelledby="gridSystemModalLabel">
+</div>
+
+<!-- This will be printed -->
+<!-- <section class="invoice print_section" id="receipt_section">
+</section> -->
+
+
+@stop
+
+@section('javascript')
+@include('sale_pos.partials.sale_table_javascript')
+<script src="{{ asset('js/payment.js?v=' . $asset_v) }}"></script>
+<script type="text/javascript">
+
+    $('.btn-consulta-status').click(() => {
+        $.post('{{ route("nfce.consulta-status") }}')
+        .done((res) => {
+            console.log(res)
+            let msg = "cStat: " + res.cStat
+            msg += "\nMotivo: " + res.xMotivo
+            msg += "\nAmbiente: " + (res.tpAmb == 2 ? "Homologação" : "Produção")
+            msg += "\nverAplic: " + res.verAplic
+
+            swal("Sucesso", msg, "success")
+        }).fail((err) => {
+            console.log(err)
+            try{
+                swal("Erro", err.responseText, "error")
+            }catch{
+                swal("Erro", "Algo deu errado", "error")
+            }
+        })
+    })
+
+</script>
+@endsection

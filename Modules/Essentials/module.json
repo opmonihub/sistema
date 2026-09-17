@@ -1,0 +1,16 @@
+{
+    "name": "Essentials",
+    "alias": "Essenciais e RH",
+    "description": "Algumas funcionalidades essenciais para todos os negócios e recursos de gerenciamento de recursos humanos (RH).",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Essentials\\Providers\\EssentialsServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

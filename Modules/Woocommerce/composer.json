@@ -1,0 +1,25 @@
+{
+    "name": "twf/woocommerce",
+    "description": "",
+    "authors": [
+        {
+            "name": "LojaDev",
+            "email": "contato@lojadodesenvolvedor.com.br"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Woocommerce\\Providers\\WoocommerceServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Woocommerce\\": ""
+        }
+    }
+}
