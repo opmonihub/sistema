@@ -54,6 +54,11 @@ return [
 
     'url' => env('APP_URL', 'https://sistema.enterprisechat.com.br'),
 
+    //Selects which login screen is shown: "pag1" = classic auth.login,
+    //anything else = alternative auth.login2. Read via config (not getenv),
+    //because .env is NOT loaded when the configuration is cached.
+    'pagelogin' => env('PAGELOGIN', 'pag1'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

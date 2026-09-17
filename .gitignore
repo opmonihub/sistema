@@ -28,6 +28,8 @@ bd.sql
 # --- dados gerados/operacionais (não versionar) ---
 __MACOSX/
 .DS_Store
+.kilo/
+.claude/
 /storage/framework/views/
 /storage/framework/sessions/
 /storage/framework/cache/

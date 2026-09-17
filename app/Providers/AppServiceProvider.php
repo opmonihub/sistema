@@ -96,10 +96,12 @@ class AppServiceProvider extends ServiceProvider
         //Blade directive to format number into required format.
         Blade::directive('num_format', function ($expression) {
 
-            $business_id = session('user.business_id');
-            $casas_decimais = Business::where('id', $business_id)->value('casas_decimais_valor');
+            //Decimals resolve at RUNTIME via the $casas_decimais view variable
+            //(shared for all views above). Do not query session/DB here:
+            //this closure runs at Blade COMPILE time (often CLI, no session)
+            //and would bake broken number_format(X, , ...) into compiled views.
 
-            return "number_format($expression, $casas_decimais, ',', '.')";
+            return "number_format($expression, (\$casas_decimais ?? 2), ',', '.')";
         });
 
         //Blade directive to format quantity values into required format.
@@ -110,7 +112,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Blade::directive('format_quantity_pdv', function ($expression) {
-            return "number_format($expression, $casas_decimais, ',', '')";
+            return "number_format($expression, (\$casas_decimais ?? 2), ',', '')";
 
             // return "number_format($expression, config('constants.quantity_precision', 2), session('currency')['decimal_separator'], session('currency')['thousand_separator'])";
         });

@@ -59,6 +59,33 @@ class LoginController extends Controller
         return 'username';
     }
 
+    /**
+     * Show the application's login form.
+     *
+     * Overrides the vendor trait method, which selects the screen with
+     * getenv("PAGELOGIN"). getenv() does NOT see .env values when the
+     * configuration is cached (Laravel skips loading .env), so it always
+     * fell through to the alternative auth.login2 screen. Using config()
+     * works both with and without config cache.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showLoginForm()
+    {
+        $CookieUserName = (isset($_COOKIE['CookieUserName'])) ?
+        base64_decode($_COOKIE['CookieUserName']) : '';
+        $Cookiepass = (isset($_COOKIE['Cookiepass'])) ?
+        base64_decode($_COOKIE['Cookiepass']) : '';
+        $Cookieremember = (isset($_COOKIE['Cookieremember'])) ?
+        $_COOKIE['Cookieremember'] : '';
+
+        if (config('app.pagelogin', 'pag1') == 'pag1') {
+            return view('auth.login', compact('CookieUserName', 'Cookiepass', 'Cookieremember'));
+        }
+
+        return view('auth.login2', compact('CookieUserName', 'Cookiepass', 'Cookieremember'));
+    }
+
     public function logout()
     {
         request()->session()->flush();
