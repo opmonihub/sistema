@@ -204,6 +204,10 @@
 													<input type="hidden" name="orig[]" value="{{$i['orig']}}">
 													<input type="hidden" name="pST[]" value="{{$i['pST']}}">
 													<input type="hidden" name="vICMS[]" value="{{$i['vICMS']}}">
+													<input type="hidden" name="modBC[]" value="{{$i['modBC']}}">
+													<input type="hidden" name="cest[]" value="{{$i['CEST']}}">
+													<input type="hidden" name="vUnTrib[]" value="{{$i['vUnTrib']}}">
+													<input type="hidden" name="vIPI[]" value="{{$i['vIPI']}}">
 
 													<tr id="tr_{{$i['codigo']}}">
 														<td>
