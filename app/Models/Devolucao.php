@@ -87,67 +87,80 @@ class Devolucao extends Model
 
     public static function getTrib($objeto){
 
-        $arr = (array_values((array)$objeto->ICMS));
-        $cst = $arr[0]->CST ? $arr[0]->CST : $arr[0]->CSOSN;
-
-        $pICMS = $arr[0]->pICMS ?? 0;
-        $vICMS = $arr[0]->vICMS ?? 0;
-        $pRedBC = $arr[0]->pRedBC ?? 0;
-        $vBCSTRet = $arr[0]->vBCSTRet ?? 0;
-        $modBCST = $arr[0]->modBCST ?? 0;
-        $vBCST = $arr[0]->vBCST ?? 0;
-        $pICMSST = $arr[0]->pICMSST ?? 0;
-        $vICMSST = $arr[0]->vICMSST ?? 0;
-        $pMVAST = $arr[0]->pMVAST ?? 0;
-        $pST = $arr[0]->pST ?? 0;
-        $vICMSSubstituto = $arr[0]->vICMSSubstituto ?? 0;
-        $vICMSSTRet = $arr[0]->vICMSSTRet ?? 0;
-        $orig = $arr[0]->orig ?? 0;
-
-        $vBC = $arr[0]->vBC ?? 0;
-
-        $arr = (array_values((array)$objeto->PIS));
-
-        $pis = $arr[0]->CST;
-        $pPIS = $arr[0]->pPIS ?? 0;
-        $vbcPis = $arr[0]->vBC ?? 0;
-
-        $arr = (array_values((array)$objeto->COFINS));
-        $cofins = $arr[0]->CST;
-        $pCOFINS = $arr[0]->COFINS ?? 0;
-        if($pCOFINS == 0){
-            $pCOFINS = $arr[0]->pCOFINS ?? 0;
+        // ICMS — lê o primeiro grupo filho (ICMS00, ICMS10, ICMSSNxxx, ...)
+        // via children() para não depender da ordem das chaves do cast.
+        $icmsNode = null;
+        if (isset($objeto->ICMS)) {
+            foreach ($objeto->ICMS->children() as $node) { $icmsNode = $node; break; }
+            if ($icmsNode === null) {
+                $arr = array_values((array) $objeto->ICMS);
+                $icmsNode = (isset($arr[0]) && is_object($arr[0])) ? $arr[0] : null;
+            }
         }
-        $vbcCofins = $arr[0]->vBC ?? 0;
+        $cst = (string) ($icmsNode->CST ?? $icmsNode->CSOSN ?? '');
+
+        $pICMS = (float) ($icmsNode->pICMS ?? 0);
+        $vICMS = (float) ($icmsNode->vICMS ?? 0);
+        $pRedBC = (float) ($icmsNode->pRedBC ?? 0);
+        $modBC = (int) ($icmsNode->modBC ?? 3);
+        $vBCSTRet = (float) ($icmsNode->vBCSTRet ?? 0);
+        $modBCST = (float) ($icmsNode->modBCST ?? 0);
+        $vBCST = (float) ($icmsNode->vBCST ?? 0);
+        $pICMSST = (float) ($icmsNode->pICMSST ?? 0);
+        $vICMSST = (float) ($icmsNode->vICMSST ?? 0);
+        $pMVAST = (float) ($icmsNode->pMVAST ?? 0);
+        $pST = (float) ($icmsNode->pST ?? 0);
+        $vICMSSubstituto = (float) ($icmsNode->vICMSSubstituto ?? 0);
+        $vICMSSTRet = (float) ($icmsNode->vICMSSTRet ?? 0);
+        $orig = (int) ($icmsNode->orig ?? 0);
+
+        $vBC = (float) ($icmsNode->vBC ?? 0);
+
+        // PIS — PISAliq / PISQtde / PISNT / PISOutr
+        $pisNode = null;
+        if (isset($objeto->PIS)) {
+            foreach ($objeto->PIS->children() as $node) { $pisNode = $node; break; }
+            if ($pisNode === null) {
+                $arr = array_values((array) $objeto->PIS);
+                $pisNode = (isset($arr[0]) && is_object($arr[0])) ? $arr[0] : null;
+            }
+        }
+
+        $pis = (string) ($pisNode->CST ?? '');
+        $pPIS = (float) ($pisNode->pPIS ?? 0);
+        $vbcPis = (float) ($pisNode->vBC ?? 0);
+
+        // COFINS — COFINSAliq / COFINSQtde / COFINSNT / COFINSOutr
+        $cofinsNode = null;
+        if (isset($objeto->COFINS)) {
+            foreach ($objeto->COFINS->children() as $node) { $cofinsNode = $node; break; }
+            if ($cofinsNode === null) {
+                $arr = array_values((array) $objeto->COFINS);
+                $cofinsNode = (isset($arr[0]) && is_object($arr[0])) ? $arr[0] : null;
+            }
+        }
+        $cofins = (string) ($cofinsNode->CST ?? '');
+        $pCOFINS = (float) ($cofinsNode->pCOFINS ?? 0);
+        $vbcCofins = (float) ($cofinsNode->vBC ?? 0);
 
 
-        $arr = (array_values((array)$objeto->IPI));
+        // IPI — IPITrib (tributado) ou IPINT (não tributado)
+        $ipiNode = isset($objeto->IPI) ? $objeto->IPI : null;
+        $ipiTrib = ($ipiNode && isset($ipiNode->IPITrib)) ? $ipiNode->IPITrib : null;
+        $ipiNT = ($ipiNode && isset($ipiNode->IPINT)) ? $ipiNode->IPINT : null;
 
         $vbcIpi = 0;
-        if(isset($arr[1])){
-
-            $ipi = $arr[1]->CST ?? '99';
-            $pIPI = $arr[0]->IPI ?? 0;
-            if($pIPI == 0){
-                $pIPI = $arr[0]->pIPI ?? 0;
-            }
-
-            if(isset($arr[1]->pIPI)){
-                $pIPI = $arr[1]->pIPI ?? 0;
-                $vbcIpi = $arr[1]->vBC ?? 0;
-
-            }else{
-                if(isset($arr[4]->pIPI)){
-                    $ipi = $arr[4]->CST;
-                    $pIPI = $arr[4]->pIPI;
-                    $vbcIpi = $arr[4]->vBC ?? 0;
-
-                }else{
-                    $pIPI = 0;
-                }
-            }
-
-        }else{
+        $vIPI = 0;
+        $cEnq = (string) ($ipiNode->cEnq ?? '999');
+        if ($ipiTrib !== null) {
+            $ipi = (string) ($ipiTrib->CST ?? '50');
+            $pIPI = (float) ($ipiTrib->pIPI ?? 0);
+            $vbcIpi = (float) ($ipiTrib->vBC ?? 0);
+            $vIPI = (float) ($ipiTrib->vIPI ?? 0);
+        } elseif ($ipiNT !== null) {
+            $ipi = (string) ($ipiNT->CST ?? '99');
+            $pIPI = 0;
+        } else {
             $ipi = '99';
             $pIPI = 0;
         }
@@ -162,6 +175,7 @@ class Devolucao extends Model
             'cst_ipi' => (string)$ipi,
             'pIPI' => (float)$pIPI,
             'pRedBC' => (float)$pRedBC,
+            'modBC' => (int)$modBC,
             'vBCSTRet' => (float)$vBCSTRet,
             'vBC' => (float)$vBC,
             'vICMS' => (float)$vICMS,
@@ -178,9 +192,45 @@ class Devolucao extends Model
             'vbcPis' => (float)$vbcPis,
             'vbcCofins' => (float)$vbcCofins,
             'vbcIpi' => (float)$vbcIpi,
+            'vIPI' => (float)$vIPI,
+            'cEnq' => (string)$cEnq,
         ];
 
         return $data;
 
+    }
+
+    /**
+     * Mapeia CFOP de saída da nota de origem para CFOP de
+     * devolução (entrada). Ex.: 6101 (venda fora do estado)
+     * vira 1202 (devolução de venda fora do estado).
+     */
+    public static function cfopDevolucao($cfopOrigem){
+        $cfop = preg_replace('/[^0-9]/', '', (string) $cfopOrigem);
+        if (strlen($cfop) !== 4) {
+            return $cfopOrigem;
+        }
+        $mapa = [
+            '5101' => '1201', '5102' => '1202', '5103' => '1201',
+            '5104' => '1202', '5105' => '1201', '5106' => '1202',
+            '5401' => '1401', '5403' => '1403', '5405' => '1407',
+            '5501' => '1501', '5502' => '1502', '5503' => '1503',
+            '6101' => '1202', '6102' => '1202', '6103' => '1202',
+            '6104' => '1202', '6105' => '1202', '6106' => '1202',
+            '6107' => '1202', '6108' => '1202', '6401' => '1401',
+            '6403' => '1403', '6405' => '1407', '6501' => '1501',
+        ];
+        if (isset($mapa[$cfop])) {
+            return $mapa[$cfop];
+        }
+        // Regra geral: saída dentro do estado (5xxx) => 1201,
+        // saída fora do estado (6xxx) => 1202.
+        if ($cfop[0] === '5') {
+            return '1201';
+        }
+        if ($cfop[0] === '6') {
+            return '1202';
+        }
+        return $cfopOrigem;
     }
 }
