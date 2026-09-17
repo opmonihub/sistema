@@ -183,31 +183,31 @@
 
 													@foreach($itens as $i)
 
-													<input type="hidden" name="codigo_anp[]" value="{{$i['codigo_anp']}}">
-													<input type="hidden" name="descricao_anp[]" value="{{$i['descricao_anp']}}">
-													<input type="hidden" name="uf_cons[]" value="{{$i['uf_cons']}}">
-													<input type="hidden" name="valor_partida[]" value="{{$i['valor_partida']}}">
-													<input type="hidden" name="perc_glp[]" value="{{$i['perc_glp']}}">
-													<input type="hidden" name="perc_gnn[]" value="{{$i['perc_gnn']}}">
-													<input type="hidden" name="perc_gni[]" value="{{$i['perc_gni']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="codigo_anp[]" value="{{$i['codigo_anp']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="descricao_anp[]" value="{{$i['descricao_anp']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="uf_cons[]" value="{{$i['uf_cons']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="valor_partida[]" value="{{$i['valor_partida']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="perc_glp[]" value="{{$i['perc_glp']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="perc_gnn[]" value="{{$i['perc_gnn']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="perc_gni[]" value="{{$i['perc_gni']}}">
 
-													<input type="hidden" name="unidade_tributavel[]" value="{{$i['unidade_tributavel']}}">
-													<input type="hidden" name="quantidade_tributavel[]" value="{{$i['quantidade_tributavel']}}">
-													<input type="hidden" name="modBCST[]" value="{{$i['modBCST']}}">
-													<input type="hidden" name="vBCST[]" value="{{$i['vBCST']}}">
-													<input type="hidden" name="pICMSST[]" value="{{$i['pICMSST']}}">
-													<input type="hidden" name="vICMSST[]" value="{{$i['vICMSST']}}">
-													<input type="hidden" name="pMVAST[]" value="{{$i['pMVAST']}}">
-													<input type="hidden" name="vBCSTRet[]" value="{{$i['vBCSTRet']}}">
-													<input type="hidden" name="vICMSSubstituto[]" value="{{$i['vICMSSubstituto']}}">
-													<input type="hidden" name="vICMSSTRet[]" value="{{$i['vICMSSTRet']}}">
-													<input type="hidden" name="orig[]" value="{{$i['orig']}}">
-													<input type="hidden" name="pST[]" value="{{$i['pST']}}">
-													<input type="hidden" name="vICMS[]" value="{{$i['vICMS']}}">
-													<input type="hidden" name="modBC[]" value="{{$i['modBC']}}">
-													<input type="hidden" name="cest[]" value="{{$i['CEST']}}">
-													<input type="hidden" name="vUnTrib[]" value="{{$i['vUnTrib']}}">
-													<input type="hidden" name="vIPI[]" value="{{$i['vIPI']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="unidade_tributavel[]" value="{{$i['unidade_tributavel']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="quantidade_tributavel[]" value="{{$i['quantidade_tributavel']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="modBCST[]" value="{{$i['modBCST']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="vBCST[]" value="{{$i['vBCST']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="pICMSST[]" value="{{$i['pICMSST']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="vICMSST[]" value="{{$i['vICMSST']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="pMVAST[]" value="{{$i['pMVAST']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="vBCSTRet[]" value="{{$i['vBCSTRet']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="vICMSSubstituto[]" value="{{$i['vICMSSubstituto']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="vICMSSTRet[]" value="{{$i['vICMSSTRet']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="orig[]" value="{{$i['orig']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="pST[]" value="{{$i['pST']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="vICMS[]" value="{{$i['vICMS']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="modBC[]" value="{{$i['modBC']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="cest[]" value="{{$i['CEST']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="vUnTrib[]" value="{{$i['vUnTrib']}}">
+													<input type="hidden" class="hiddens-{{$i['codigo']}}" name="vIPI[]" value="{{$i['vIPI']}}">
 
 													<tr id="tr_{{$i['codigo']}}">
 														<td>
@@ -609,6 +609,7 @@
 
 		console.log("id: ",'#tr_' + id)
 		$('#tr_' + id).remove()
+		$('.hiddens-' + id).remove();
 		swal("Sucesso", "Item "+id+" removido", "success")
 	}
 
