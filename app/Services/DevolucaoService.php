@@ -186,6 +186,7 @@ class DevolucaoService{
 		$somaST = 0;
 		$somaAcrescimo = 0;
 		$somaIPI = 0;
+		$somaPIS = 0; $somaCOFINS = 0;
 		$somaDesconto = 0;
 		foreach($devolucao->itens as $i){
 			$itemCont++;
@@ -448,6 +449,7 @@ class DevolucaoService{
 			$stdPIS->vPIS = $this->format($stdPIS->vBC * ($i->perc_pis/100));;
 			// $stdPIS->qBCProd = 0.00;
 			$PIS = $nfe->tagPIS($stdPIS);
+			$somaPIS += (float) $stdPIS->vPIS;
 
 			
 			$stdCOFINS = new \stdClass();//COFINS
@@ -457,6 +459,7 @@ class DevolucaoService{
 			$stdCOFINS->pCOFINS = $this->format($i->perc_cofins);
 			$stdCOFINS->vCOFINS = $this->format($stdCOFINS->vBC * ($i->perc_cofins/100));
 			$COFINS = $nfe->tagCOFINS($stdCOFINS);
+			$somaCOFINS += (float) $stdCOFINS->vCOFINS;
 
 
 			$std = new \stdClass();//IPI
@@ -510,6 +513,7 @@ class DevolucaoService{
 
 		$stdICMSTot = new \stdClass();
 		// $stdICMSTot->vBC = $this->format($somaVbc);
+		$stdICMSTot->vBC = $this->format($VBC > 0 ? $VBC : $somaVbc);
 		$stdICMSTot->vICMS = $this->format($somaICMS);
 		$stdICMSTot->vICMSDeson = 0.00;
 		$stdICMSTot->vBCST = 0.00;
@@ -523,9 +527,10 @@ class DevolucaoService{
 		$stdICMSTot->vDesc = $this->format($devolucao->vDesc);
 		// $stdICMSTot->vDesc = $this->format($devolucao->vDesc);
 		$stdICMSTot->vII = 0.00;
-		$stdICMSTot->vIPI = 0.00;
-		$stdICMSTot->vPIS = 0.00;
-		$stdICMSTot->vCOFINS = 0.00;
+		$stdICMSTot->vIPI = $this->format($somaIPI);
+		$stdICMSTot->vPIS = $this->format($somaPIS);
+		$stdICMSTot->vCOFINS = $this->format($somaCOFINS);
+		$stdICMSTot->vIPIDevol = 0.00;
 		$stdICMSTot->vOutro = $this->format($devolucao->vOutro);
 
 		
