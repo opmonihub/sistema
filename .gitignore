@@ -19,6 +19,7 @@ bd.sql
 *.zip
 /backup/
 /public/xml_*/
+NFE-*.xml
 /public/extract/
 /public/uploads/business_certificados/
 /public/certificados/

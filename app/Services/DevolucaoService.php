@@ -472,7 +472,11 @@ class DevolucaoService{
 			$std->CST = $i->cst_ipi;
 			$std->vBC = $i->vbcIpi;
 			$std->pIPI = $this->format($i->perc_ipi);
-			$somaIPI += $std->vIPI = $this->format($std->vBC * ($i->perc_ipi/100));
+			$calcIPI = (float) $i->vbcIpi * ((float) $i->perc_ipi / 100);
+			$std->vIPI = (abs($calcIPI - (float) $i->vIPI) <= 0.05 && (float) $i->vIPI > 0)
+			    ? $this->format($i->vIPI)
+			    : $this->format($calcIPI);
+			$somaIPI += (float) $std->vIPI;
 			$std->qUnid = null;
 			$std->vUnid = null;
 
