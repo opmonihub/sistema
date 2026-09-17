@@ -91,7 +91,7 @@ class DevolucaoService{
 		$ie = preg_replace('/[^0-9]/', '', $config->ie);
 		$stdEmit->IE = $ie;
 
-		$regime = $devolucao->itens[0]->cst_csosn >= 101 ? 1 : 3;
+		$regime = (int) $config->regime === 1 ? 1 : 3;
 
 		$stdEmit->CRT = $regime;
 
@@ -224,7 +224,8 @@ class DevolucaoService{
 			// $stdProd->qTrib = $i->quantidade;
 			$stdProd->qTrib = $i->quantidade_tributavel == 0 ? $i->quantidade : $i->quantidade_tributavel;
 
-			$stdProd->vUnTrib = $this->format($i->valor_unit, $config->casas_decimais_valor);
+			$vUnTrib = (float) $i->vUnTrib > 0 ? $i->vUnTrib : $i->valor_unit;
+			$stdProd->vUnTrib = $this->format($vUnTrib, $config->casas_decimais_valor);
 			$stdProd->indTot = 1;
 
 			$somaProdutos += ($i->quantidade * $i->valor_unit);
@@ -298,6 +299,12 @@ class DevolucaoService{
 			}
 
 			$prod = $nfe->tagprod($stdProd);
+			if (!empty($i->cest)) {
+			    $stdCEST = new \stdClass();
+			    $stdCEST->item = $itemCont;
+			    $stdCEST->CEST = $i->cest;
+			    $nfe->tagCEST($stdCEST);
+			}
 
 		//TAG IMPOSTO
 
@@ -318,7 +325,7 @@ class DevolucaoService{
 				$stdICMS->orig = $i->orig;
 				$stdICMS->CST = $i->cst_csosn;
 
-				$stdICMS->modBC = 0;
+				$stdICMS->modBC = (int) ($i->modBC > 0 ? $i->modBC : 3);
 				if($i->pRedBC == 0){
 
 					if($i->cst_csosn == 60){
@@ -353,7 +360,8 @@ class DevolucaoService{
 						} 
 					}
 
-					if($config->UF != $devolucao->contact->cidade->uf){
+					if ($config->UF != $devolucao->contact->cidade->uf
+					    && !in_array((string) $i->cst_csosn, ['00', '900'], true)) {
 						$stdICMS->pST = $this->format($i->pST);
 						$stdICMS->vBCSTRet = 0;
 						$stdICMS->vICMSSubstituto = $this->format($i->vICMSSubstituto);
@@ -364,7 +372,10 @@ class DevolucaoService{
 					}
 
 					$stdICMS->pICMS = $this->format($i->perc_icms);
-					$stdICMS->vICMS = $stdICMS->vBC * ($stdICMS->pICMS/100);
+					$calcICMS = (float) $stdICMS->vBC * ((float) $stdICMS->pICMS / 100);
+					$stdICMS->vICMS = (abs($calcICMS - (float) $i->vICMS) <= 0.05 && (float) $i->vICMS > 0)
+					    ? $this->format($i->vICMS)
+					    : $this->format($calcICMS);
 					$stdICMS->pRedBC = $this->format($i->pRedBC);
 
 					if($i->modBCST > 0){
@@ -411,14 +422,21 @@ class DevolucaoService{
 
 				$stdICMS = new \stdClass();
 
-				$stdICMS->item = $itemCont; 
+				$stdICMS->item = $itemCont;
 				$stdICMS->orig = $i->orig;
-				$stdICMS->CSOSN = $i->cst_csosn;
-				$stdICMS->pCredSN = $this->format($i->perc_icms);
-				$stdICMS->vCredICMSSN = $this->format($i->perc_icms);
+				$stdICMS->CSOSN = '900';
+				$stdICMS->modBC = (int) ($i->modBC > 0 ? $i->modBC : 3);
+				$stdICMS->vBC = $this->format($i->vBC);
+				$VBC += (float) $stdICMS->vBC;
+				$stdICMS->pRedBC = $this->format($i->pRedBC);
+				$stdICMS->pICMS = $this->format($i->perc_icms);
+				$calcICMS = (float) $i->vBC * ((float) $i->perc_icms / 100);
+				$stdICMS->vICMS = (abs($calcICMS - (float) $i->vICMS) <= 0.05 && (float) $i->vICMS > 0)
+				    ? $this->format($i->vICMS)
+				    : $this->format($calcICMS);
 				$ICMS = $nfe->tagICMSSN($stdICMS);
 
-				$somaICMS = 0;
+				$somaICMS += (float) $stdICMS->vICMS;
 			}
 
 			$stdPIS = new \stdClass();//PIS
