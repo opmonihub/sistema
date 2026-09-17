@@ -325,12 +325,20 @@ class NFeEntradaService {
 
 		$transp = $nfe->tagtransp($stdTransp);
 
-		$std = new \stdClass();
-		$std->CNPJ = getenv('RESP_CNPJ'); //CNPJ da pessoa jurídica responsável pelo sistema utilizado na emissão do documento fiscal eletrônico
-		$std->xContato= getenv('RESP_NOME'); //Nome da pessoa a ser contatada
-		$std->email = getenv('RESP_EMAIL'); //E-mail da pessoa jurídica a ser contatada
-		$std->fone = getenv('RESP_FONE'); //Telefone da pessoa jurídica/física a ser contatada
-		$nfe->taginfRespTec($std);
+		$respCnpj = preg_replace('/[^0-9]/', '', (string) (env('RESP_CNPJ') ?? getenv('RESP_CNPJ') ?: ''));
+		$respNome = trim((string) (env('RESP_NOME') ?? getenv('RESP_NOME') ?: ''));
+		$respEmail = trim((string) (env('RESP_EMAIL') ?? getenv('RESP_EMAIL') ?: ''));
+		$respFone = preg_replace('/[^0-9]/', '', (string) (env('RESP_FONE') ?? getenv('RESP_FONE') ?: ''));
+		if (strlen($respCnpj) === 14 && strlen($respNome) >= 2 && strlen($respEmail) >= 6 && preg_match('/^[0-9]{6,14}$/', $respFone)) {
+			$std = new \stdClass();
+			$std->CNPJ = $respCnpj; //CNPJ da pessoa jurídica responsável pelo sistema utilizado na emissão do documento fiscal eletrônico
+			$std->xContato = $respNome; //Nome da pessoa a ser contatada
+			$std->email = $respEmail; //E-mail da pessoa jurídica a ser contatada
+			$std->fone = $respFone; //Telefone da pessoa jurídica/física a ser contatada
+			$nfe->taginfRespTec($std);
+		} else {
+			\Log::warning('infRespTec omitido (NFeEntrada): RESP_* ausente ou inválido', compact('respCnpj', 'respNome', 'respEmail', 'respFone'));
+		}
 
 	//Fatura
 

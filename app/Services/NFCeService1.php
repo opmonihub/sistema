@@ -497,13 +497,21 @@ class NFCeService{
 		$pag = $nfe->tagpag($stdPag);
 
 		//Resp Tecnico
-		$stdResp = new \stdClass();
-		$stdResp->CNPJ = getenv('RESP_CNPJ'); 
-		$stdResp->xContato= getenv('RESP_NOME');
-		$stdResp->email = getenv('RESP_EMAIL'); 
-		$stdResp->fone = getenv('RESP_FONE'); 
+		$respCnpj = preg_replace('/[^0-9]/', '', (string) (env('RESP_CNPJ') ?? getenv('RESP_CNPJ') ?: ''));
+		$respNome = trim((string) (env('RESP_NOME') ?? getenv('RESP_NOME') ?: ''));
+		$respEmail = trim((string) (env('RESP_EMAIL') ?? getenv('RESP_EMAIL') ?: ''));
+		$respFone = preg_replace('/[^0-9]/', '', (string) (env('RESP_FONE') ?? getenv('RESP_FONE') ?: ''));
+		if (strlen($respCnpj) === 14 && strlen($respNome) >= 2 && strlen($respEmail) >= 6 && preg_match('/^[0-9]{6,14}$/', $respFone)) {
+			$stdResp = new \stdClass();
+			$stdResp->CNPJ = $respCnpj;
+			$stdResp->xContato = $respNome;
+			$stdResp->email = $respEmail;
+			$stdResp->fone = $respFone;
 
-		$nfe->taginfRespTec($stdResp);
+			$nfe->taginfRespTec($stdResp);
+		} else {
+			\Log::warning('infRespTec omitido (NFCe1): RESP_* ausente ou inválido', compact('respCnpj', 'respNome', 'respEmail', 'respFone'));
+		}
 
 		//DETALHE PAGAMENTO
 

@@ -25,7 +25,7 @@ class Csv
 				'path' => $path,
 				'senha' => $request->senha_certificado,
 				'file' => base64_encode($temp),
-				'fone' => getenv('RESP_FONE') ?? ''
+				'fone' => env('RESP_FONE') ?? getenv('RESP_FONE') ?: ''
 			];
 
 			try{
