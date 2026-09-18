@@ -29,7 +29,6 @@ NFE-*.xml
 # --- dados gerados/operacionais (não versionar) ---
 __MACOSX/
 .DS_Store
-.kilo/
 .claude/
 /storage/framework/views/
 /storage/framework/sessions/
@@ -40,3 +39,5 @@ __MACOSX/
 /public/temp/
 /public/print_xml/
 /public/files/
+.opencode/node_modules/
+openspec/changes/
