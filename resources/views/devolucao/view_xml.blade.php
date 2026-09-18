@@ -597,7 +597,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.11/jquery.mask.min.js"></script>
 <script type="text/javascript">
 	$(document).ready(function(){
-		$('#product_table').doubleScroll();
+		if ($.fn.doubleScroll) {
+			$('#product_table').doubleScroll();
+		}
 	});
 	$('product_table')
 	$('#perc_venda').mask('000.00', {reverse: true})

@@ -602,7 +602,7 @@ class DevolucaoController extends Controller
 						'perc_gni' => $request->perc_gni[$i],
 
 						'unidade_tributavel' => $request->unidade_tributavel[$i],
-						'quantidade_tributavel' => $request->quantidade_tributavel[$i],
+						'quantidade_tributavel' => ($request->unidade_tributavel[$i] == "" || $request->unidade_tributavel[$i] == $request->uCom[$i]) ? $this->parseNumberDatabase($request->qtd[$i]) : $request->quantidade_tributavel[$i],
 						'modBCST' => $request->modBCST[$i],
 						'vBCST' => $request->vBCST[$i],
 						'pICMSST' => $request->pICMSST[$i],
@@ -725,7 +725,7 @@ public function update(Request $request, $id){
 					'perc_gni' => $request->perc_gni[$i],
 
 					'unidade_tributavel' => $request->unidade_tributavel[$i],
-					'quantidade_tributavel' => $request->quantidade_tributavel[$i],
+					'quantidade_tributavel' => ($request->unidade_tributavel[$i] == "" || $request->unidade_tributavel[$i] == $request->uCom[$i]) ? $this->parseNumberDatabase($request->qtd[$i]) : $request->quantidade_tributavel[$i],
 					'modBCST' => $request->modBCST[$i],
 					'vBCST' => $request->vBCST[$i],
 					'pICMSST' => $request->pICMSST[$i],

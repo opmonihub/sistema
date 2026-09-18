@@ -143,9 +143,16 @@
               }, error: function(e){
                 console.log(e)
 
-                console.log(e.responseJSON.data.retEvento.infEvento.xMotivo)
+                var msg = "Algo não ocorreu bem!";
+                try {
+                  if (e.responseJSON && e.responseJSON.data && e.responseJSON.data.retEvento && e.responseJSON.data.retEvento.infEvento) {
+                    msg = e.responseJSON.data.retEvento.infEvento.xMotivo;
+                  } else if (e.responseJSON && e.responseJSON.protocolo) {
+                    msg = e.responseJSON.protocolo;
+                  }
+                } catch (err) {}
 
-                swal("Erro ao cancelar", e.responseJSON.data.retEvento.infEvento.xMotivo, "error");
+                swal("Erro ao cancelar", msg, "error");
 
               }
 

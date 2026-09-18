@@ -191,6 +191,27 @@ class DevolucaoService{
 		foreach($devolucao->itens as $i){
 			$itemCont++;
 
+			// Devolução parcial: bases/valores da origem são integrais, mas a
+			// qtd devolvida pode ser menor. Proporcionaliza pelas quantidades
+			// quando a unidade tributária é a mesma da comercial.
+			$fatorQtd = 1.0;
+			$qtdDev = (float) $i->quantidade;
+			$qTribOrig = (float) $i->quantidade_tributavel;
+			$uTribItem = (string) ($i->unidade_tributavel != "" ? $i->unidade_tributavel : $i->unidade_medida);
+			if ($qTribOrig > 0 && $qtdDev > 0 && $qTribOrig > $qtdDev
+				&& $uTribItem == (string) $i->unidade_medida) {
+				$fatorQtd = $qtdDev / $qTribOrig;
+			}
+			$vBCItem = (float) $i->vBC * $fatorQtd;
+			$vbcIpiItem = (float) $i->vbcIpi * $fatorQtd;
+			$vbcPisItem = (float) $i->vbcPis * $fatorQtd;
+			$vbcCofinsItem = (float) $i->vbcCofins * $fatorQtd;
+			$vBCSTItem = (float) $i->vBCST * $fatorQtd;
+			$vICMSSTItem = (float) $i->vICMSST * $fatorQtd;
+			$vBCSTRetItem = (float) $i->vBCSTRet * $fatorQtd;
+			$vICMSSubstitutoItem = (float) $i->vICMSSubstituto * $fatorQtd;
+			$vICMSSTRetItem = (float) $i->vICMSSTRet * $fatorQtd;
+
 			$stdProd = new \stdClass();
 			$stdProd->item = $itemCont;
 			$cod = $this->validate_EAN13Barcode($i->codBarras);
@@ -223,7 +244,7 @@ class DevolucaoService{
 			$stdProd->uTrib = $i->unidade_tributavel == "" ? $i->unidade_medida : $i->unidade_tributavel;
 
 			// $stdProd->qTrib = $i->quantidade;
-			$stdProd->qTrib = $i->quantidade_tributavel == 0 ? $i->quantidade : $i->quantidade_tributavel;
+			$stdProd->qTrib = $fatorQtd < 1 ? $qtdDev : ($i->quantidade_tributavel == 0 ? $i->quantidade : $i->quantidade_tributavel);
 
 			$vUnTrib = (float) $i->vUnTrib > 0 ? $i->vUnTrib : $i->valor_unit;
 			$stdProd->vUnTrib = $this->format($vUnTrib, $config->casas_decimais_valor);
@@ -317,6 +338,9 @@ class DevolucaoService{
 			// ICMS
 
 			
+			// Emitente SN (CRT 1/4) só pode usar CSOSN (nunca CST) — SEFAZ
+			// rejeição 590. O CSOSN 900 com vBC/pICMS/vICMS preenchidos é o
+			// mecanismo do SN para repassar o crédito na devolução.
 			if($regime == 3){ // regime normal
 			// if($i->cst_csosn != 101 || $i->cst_csosn != 102){ // regime normal
 
@@ -331,11 +355,11 @@ class DevolucaoService{
 
 					if($i->cst_csosn == 60){
 
-						$stdICMS->vBC = $this->format($i->vBC);
+						$stdICMS->vBC = $this->format($vBCItem);
 						$stdICMS->pST = $this->format($i->pST);
-						$stdICMS->vBCSTRet = $this->format($i->vBCSTRet);
-						$stdICMS->vICMSSubstituto = $this->format($i->vICMSSubstituto);
-						$stdICMS->vICMSSTRet = $this->format($i->vICMSSTRet);
+						$stdICMS->vBCSTRet = $this->format($vBCSTRetItem);
+						$stdICMS->vICMSSubstituto = $this->format($vICMSSubstitutoItem);
+						$stdICMS->vICMSSTRet = $this->format($vICMSSTRetItem);
 
 						if(strlen($i->codigo_anp) > 0){
 							$stdICMS->vBCSTDest = 0;
@@ -350,10 +374,10 @@ class DevolucaoService{
 						// $stdICMS->vICMSEfet = 4088.50;
 					}else{
 						
-						$stdICMS->vBC = $this->format($i->vBC);
+						$stdICMS->vBC = $this->format($vBCItem);
 						if($i->cst_csosn == 40 || $i->cst_csosn == 41){
 							$stdICMS->vBCSTRet = 0;
-							$stdICMS->vICMSSTRet = $this->format($i->vICMSSTRet);
+							$stdICMS->vICMSSTRet = $this->format($vICMSSTRetItem);
 							// $stdICMS->vBCSTDest = 0;
 							// $stdICMS->vICMSSTDest = 0;
 						}else{
@@ -365,8 +389,8 @@ class DevolucaoService{
 					    && !in_array((string) $i->cst_csosn, ['00', '900'], true)) {
 						$stdICMS->pST = $this->format($i->pST);
 						$stdICMS->vBCSTRet = 0;
-						$stdICMS->vICMSSubstituto = $this->format($i->vICMSSubstituto);
-						$stdICMS->vICMSSTRet = $this->format($i->vICMSSTRet);
+						$stdICMS->vICMSSubstituto = $this->format($vICMSSubstitutoItem);
+						$stdICMS->vICMSSTRet = $this->format($vICMSSTRetItem);
 						// $stdICMS->vBCSTDest = 0;
 						// $stdICMS->vICMSSTDest = 0;
 						// $stdICMS->pRedBCEfet = 0;
@@ -374,8 +398,9 @@ class DevolucaoService{
 
 					$stdICMS->pICMS = $this->format($i->perc_icms);
 					$calcICMS = (float) $stdICMS->vBC * ((float) $stdICMS->pICMS / 100);
-					$stdICMS->vICMS = (abs($calcICMS - (float) $i->vICMS) <= 0.05 && (float) $i->vICMS > 0)
-					    ? $this->format($i->vICMS)
+					$vICMSRef = (float) $i->vICMS * $fatorQtd;
+					$stdICMS->vICMS = (abs($calcICMS - $vICMSRef) <= 0.05 && $vICMSRef > 0)
+					    ? $this->format($vICMSRef)
 					    : $this->format($calcICMS);
 					$stdICMS->pRedBC = $this->format($i->pRedBC);
 
@@ -383,19 +408,19 @@ class DevolucaoService{
 						$stdICMS->modBCST = (int)$i->modBCST;
 					}
 					if($i->vBCST > 0){
-						$stdICMS->vBCST = $i->vBCST;
+						$stdICMS->vBCST = $this->format($vBCSTItem);
 					}
 					if($i->pICMSST > 0){
 						$stdICMS->pICMSST = $i->pICMSST;
 					}
-					if($i->vICMSST > 0){
-						$somaST += $stdICMS->vICMSST = $i->vICMSST;
+					if($vICMSSTItem > 0){
+						$somaST += $stdICMS->vICMSST = $this->format($vICMSSTItem);
 					}
 					if($i->pMVAST > 0){
 						$stdICMS->pMVAST = $i->pMVAST;
 					}
 
-					if($stdICMS->CST == 41 && $i->vBCSTRet > 0 || strlen($i->codigo_anp) > 0){
+					if($stdICMS->CST == 41 && $vBCSTRetItem > 0 || strlen($i->codigo_anp) > 0){
 						$ICMS = $nfe->tagICMSST($stdICMS);
 					}else{
 						$ICMS = $nfe->tagICMS($stdICMS);
@@ -427,13 +452,14 @@ class DevolucaoService{
 				$stdICMS->orig = $i->orig;
 				$stdICMS->CSOSN = '900';
 				$stdICMS->modBC = (int) ($i->modBC > 0 ? $i->modBC : 3);
-				$stdICMS->vBC = $this->format($i->vBC);
+				$stdICMS->vBC = $this->format($vBCItem);
 				$VBC += (float) $stdICMS->vBC;
 				$stdICMS->pRedBC = $this->format($i->pRedBC);
 				$stdICMS->pICMS = $this->format($i->perc_icms);
-				$calcICMS = (float) $i->vBC * ((float) $i->perc_icms / 100);
-				$stdICMS->vICMS = (abs($calcICMS - (float) $i->vICMS) <= 0.05 && (float) $i->vICMS > 0)
-				    ? $this->format($i->vICMS)
+				$calcICMS = (float) $vBCItem * ((float) $i->perc_icms / 100);
+				$vICMSRefSN = (float) $i->vICMS * $fatorQtd;
+				$stdICMS->vICMS = (abs($calcICMS - $vICMSRefSN) <= 0.05 && $vICMSRefSN > 0)
+				    ? $this->format($vICMSRefSN)
 				    : $this->format($calcICMS);
 				$ICMS = $nfe->tagICMSSN($stdICMS);
 
@@ -443,7 +469,7 @@ class DevolucaoService{
 			$stdPIS = new \stdClass();//PIS
 			$stdPIS->item = $itemCont; 
 			$stdPIS->CST = $i->cst_pis;
-			$stdPIS->vBC = $i->perc_pis > 0 ? $i->vbcPis : 0.00;
+			$stdPIS->vBC = $i->perc_pis > 0 ? $this->format($vbcPisItem) : 0.00;
 
 			$stdPIS->pPIS = $this->format($i->perc_pis);
 			$stdPIS->vPIS = $this->format($stdPIS->vBC * ($i->perc_pis/100));;
@@ -455,7 +481,7 @@ class DevolucaoService{
 			$stdCOFINS = new \stdClass();//COFINS
 			$stdCOFINS->item = $itemCont; 
 			$stdCOFINS->CST = $i->cst_cofins;
-			$stdCOFINS->vBC = $i->perc_cofins > 0 ? $i->vbcCofins : 0.00;
+			$stdCOFINS->vBC = $i->perc_cofins > 0 ? $this->format($vbcCofinsItem) : 0.00;
 			$stdCOFINS->pCOFINS = $this->format($i->perc_cofins);
 			$stdCOFINS->vCOFINS = $this->format($stdCOFINS->vBC * ($i->perc_cofins/100));
 			$COFINS = $nfe->tagCOFINS($stdCOFINS);
@@ -470,11 +496,12 @@ class DevolucaoService{
 			$std->qSelo = null;
 			$std->cEnq = '999'; //999 – para tributação normal IPI
 			$std->CST = $i->cst_ipi;
-			$std->vBC = $i->vbcIpi;
+			$std->vBC = $this->format($vbcIpiItem);
 			$std->pIPI = $this->format($i->perc_ipi);
-			$calcIPI = (float) $i->vbcIpi * ((float) $i->perc_ipi / 100);
-			$std->vIPI = (abs($calcIPI - (float) $i->vIPI) <= 0.05 && (float) $i->vIPI > 0)
-			    ? $this->format($i->vIPI)
+			$calcIPI = (float) $vbcIpiItem * ((float) $i->perc_ipi / 100);
+			$vIPIRef = (float) $i->vIPI * $fatorQtd;
+			$std->vIPI = (abs($calcIPI - $vIPIRef) <= 0.05 && $vIPIRef > 0)
+			    ? $this->format($vIPIRef)
 			    : $this->format($calcIPI);
 			$somaIPI += (float) $std->vIPI;
 			$std->qUnid = null;
@@ -835,7 +862,7 @@ class DevolucaoService{
 	public function cancelar($devolucao, $justificativa, $cnpj){
 		try {
 			// Validar se $devolucao é um objeto válido
-			if (!is_object($devolucao) || !property_exists($devolucao, 'chave_gerada')) {
+			if (!is_object($devolucao) || empty($devolucao->chave_gerada)) {
 				throw new \Exception('Objeto de devolução inválido para cancelamento');
 			}
 
