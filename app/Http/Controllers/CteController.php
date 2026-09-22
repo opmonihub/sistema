@@ -343,7 +343,7 @@ class CteController extends Controller
 		return ['tp_cte' => 1, 'chave_original' => null, 'chave_complementada' => $chave, 'ind_altera_toma' => null, 'cte_original_id' => $cte_original_id];
 	}
 
-	private function validarVinculoPreSefaz($cte, $tpCte, $chave, $cnpj, $cte_service){
+	private function validarVinculoSintatico($cte, $tpCte, $chave, $cnpj){
 		$rotulo = $tpCte == 3 ? 'substituto (chave do CT-e original)' : 'complemento (chave do CT-e complementado)';
 		$chave = $chave ? preg_replace('/\D/', '', (string) $chave) : '';
 		if($chave === ''){
@@ -359,6 +359,11 @@ class CteController extends Controller
 		if(substr($chave, 6, 14) !== $cnpj){
 			return 'A chave de origem pertence a outro CNPJ emitente. O CT-e de substituição/complemento só pode referenciar CT-e emitido pelo mesmo CNPJ.';
 		}
+		return null;
+	}
+
+	private function validarVinculoSefaz($chave, $cte_service){
+		$chave = $chave ? preg_replace('/\D/', '', (string) $chave) : '';
 		$consulta = $cte_service->consultaChave($chave);
 		if(!is_array($consulta) || !empty($consulta['erro'])){
 			$detalhe = '';
@@ -854,6 +859,14 @@ class CteController extends Controller
 
 		$cnpj = preg_replace('/[^0-9]/', '', $config->cnpj);
 
+		$chaveVinculo = $tpCte == 3 ? $cte->chave_original : ($tpCte == 1 ? $cte->chave_complementada : null);
+		if($tpCte != 0){
+			$erroVinculo = $this->validarVinculoSintatico($cte, $tpCte, $chaveVinculo, $cnpj);
+			if($erroVinculo){
+				return response()->json($erroVinculo, 422);
+			}
+		}
+
 		$cte_service = new CTeService([
 			"atualizacao" => date('Y-m-d h:i:s'),
 			"tpAmb" => (int)$config->ambiente,
@@ -871,9 +884,8 @@ class CteController extends Controller
 		], $config);
 
 
-		$chaveVinculo = $tpCte == 3 ? $cte->chave_original : ($tpCte == 1 ? $cte->chave_complementada : null);
 		if($tpCte != 0){
-			$erroVinculo = $this->validarVinculoPreSefaz($cte, $tpCte, $chaveVinculo, $cnpj, $cte_service);
+			$erroVinculo = $this->validarVinculoSefaz($chaveVinculo, $cte_service);
 			if($erroVinculo){
 				return response()->json($erroVinculo, 422);
 			}
@@ -910,6 +922,7 @@ class CteController extends Controller
 					if(!$original && $cte->cte_original_id){
 						$original = Cte::where('business_id', $business_id)
 						->where('id', $cte->cte_original_id)
+						->where('id', '!=', $cte->id)
 						->first();
 					}
 					if($original){
