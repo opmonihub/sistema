@@ -3,7 +3,7 @@
 	<link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
 @endif
 <div class="col-md-12 col-sm-12 @if(!empty($for_pdf)) width-100 align-right @endif">
-        <p class="text-right align-right"><strong>{{$contact->business->name}}</strong><br>{!! $contact->business->business_address !!}</p>
+        <p class="text-right align-right"><strong>{{ optional($contact->business)->name }}</strong><br>{!! optional($contact->business)->business_address !!}</p>
 </div>
 <div class="col-md-12 col-sm-12 col-xs-12 @if(!empty($for_pdf)) width-50 f-left @endif">
 	<p class="blue-heading p-4 width-50">DADOS:</p>
