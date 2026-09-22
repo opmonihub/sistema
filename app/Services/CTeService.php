@@ -62,8 +62,16 @@ class CTeService{
 		$ide->cCT = rand(11111111, 99999999); 
 
 		// CFOP do CTe é definido pela relação UFIni x UFFim (início x fim do transporte), não pelo estado das partes
-		$ide->CFOP = $cteEmit->municipioInicio->uf != $cteEmit->municipioFim->uf ?
-		$cteEmit->natureza->cfop_saida_inter_estadual : $cteEmit->natureza->cfop_saida_estadual;
+		// Rejeição SEFAZ 524: UF emitente != UF início (e início != EX) exige 5932/6932
+		// em qualquer finalidade (Normal, Complemento, Substituto)
+		$ufEmitente = $config->cidade->uf;
+		$ufIniCfop = $cteEmit->municipioInicio->uf;
+		if($ufEmitente != $ufIniCfop && $ufIniCfop != 'EX'){
+			$ide->CFOP = $ufIniCfop != $cteEmit->municipioFim->uf ? '6932' : '5932';
+		}else{
+			$ide->CFOP = $cteEmit->municipioInicio->uf != $cteEmit->municipioFim->uf ?
+			$cteEmit->natureza->cfop_saida_inter_estadual : $cteEmit->natureza->cfop_saida_estadual;
+		}
 
 		$ide->natOp = $cteEmit->natureza->natureza;
 		$ide->mod = '57'; 
@@ -192,7 +200,7 @@ class CTeService{
 		$enderToma->xBairro = $cteEmit->bairro_tomador; 
 		$enderToma->cMun = $cteEmit->municipioTomador->codigo; 
 		$enderToma->xMun = $cteEmit->municipioTomador->nome; 
-		$enderToma->CEP = $cteEmit->cep_tomador; 
+		$enderToma->CEP = preg_replace('/\D/', '', (string)$cteEmit->cep_tomador);
 		$enderToma->UF = $cteEmit->municipioTomador->uf; 
 		$enderToma->cPais = '1058'; 
 		$enderToma->xPais = 'Brasil';                   

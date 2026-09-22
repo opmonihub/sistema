@@ -710,6 +710,7 @@
     var DESTINATARIO = null;
     var CHAVES = [];
     var BUSCA_URL = "{{ route('cte.buscarOriginal') }}";
+    var DADOS_URL = "{{ url('cteDadosOriginal') }}/";
     var EXCLUIR_ID = 0;
 
     function tipoCteAtual(){
@@ -795,6 +796,86 @@
       });
     }
 
+    function setCampoForm(nome, valor){
+      if(valor === null || valor === undefined || valor === '') return;
+      var el = $('[name="' + nome + '"]');
+      if(!el.length) return;
+      el.val(valor);
+      el.trigger(el.is('select') ? 'change' : 'input');
+    }
+
+    function limparListasOrigem(){
+      CHAVES = [];
+      $('#chaves_list').html('');
+      $('#chaves_nfe').val('');
+      MEDIDAS = [];
+      $('#prod tbody').html('');
+      $('#meds').val('');
+      COMPONENTES = [];
+      $('#componentes tbody').html('');
+      $('#comps').val('');
+      DOCS_ANTERIORES = [];
+      $('#tbl-docs-anteriores tbody').html('');
+      $('#docs_anteriores').val('');
+    }
+
+    function preencherFormularioOriginal(d){
+      if(!d) return;
+      limparListasOrigem();
+      ['remetente_id', 'destinatario_id', 'recebedor_id', 'expedidor_id', 'natureza_id',
+       'globalizado', 'cst', 'tomador', 'tomador_outros_id', 'tipo_servico', 'veiculo_id',
+       'modal_transp', 'retira', 'cidade_tomador', 'cidade_envio', 'cidade_inicio',
+       'cidade_fim', 'tpDoc'].forEach(function(n){ setCampoForm(n, d[n]); });
+      ['perc_icms', 'rua_tomador', 'numero_tomador', 'cep_tomador', 'bairro_tomador',
+       'valor_transporte', 'valor_receber', 'valor_carga', 'prod_predominante',
+       'descOutros', 'nDoc', 'vDocFisc', 'detalhes_retira', 'observacao'].forEach(function(n){ setCampoForm(n, d[n]); });
+      if(d.data_previsata_entrega) $('#vencimento').val(d.data_previsata_entrega);
+      var chaves = (d.chave_nfe || '').split(/[;,]/);
+      chaves.forEach(function(ch){
+        ch = (ch || '').replace(/\D/g, '');
+        if(ch.length == 44) adicionarChaveArray(ch);
+      });
+      (d.medidas || []).forEach(function(m, i){
+        MEDIDAS.push({id: (i + 1), unidade_medida: m.unidade_medida, tipo_medida: m.tipo_medida, quantidade: m.quantidade});
+      });
+      if(MEDIDAS.length) $('#prod tbody').html(montaTabela());
+      (d.componentes || []).forEach(function(c, i){
+        COMPONENTES.push({id: (i + 1), valor: c.valor, nome: c.nome});
+      });
+      if(COMPONENTES.length) $('#componentes tbody').html(montaTabelaComponentes());
+      (d.documentos_anteriores || []).forEach(function(a, i){
+        DOCS_ANTERIORES.push({id: (i + 1), chave: a.chave, cnpj: a.cnpj, uf: a.uf, ie: a.ie});
+      });
+      if(DOCS_ANTERIORES.length) montaTabelaDocsAnteriores();
+      $('#tipo_servico').trigger('change');
+      atualizarContadorChave();
+      atualizarVisibilidadeToma();
+      habilitaBtnSalarCTe();
+    }
+
+    function buscarPreencherOriginal(id){
+      if(!id) return;
+      $.ajax({
+        type: 'GET',
+        url: DADOS_URL + id,
+        dataType: 'json',
+        success: function(d){
+          if(!d || typeof d !== 'object'){
+            swal('Atenção', 'Não foi possível ler os dados do CT-e original. Tente novamente.', 'warning');
+            return;
+          }
+          preencherFormularioOriginal(d);
+        },
+        error: function(xhr){
+          var detalhe = '';
+          try{ detalhe = String(xhr.responseText || '').substring(0, 200); }catch(e){}
+          console.log('[origem] fetch falhou', xhr.status, xhr.responseURL, detalhe);
+          var msg = 'Não foi possível carregar os dados do CT-e original (erro ' + xhr.status + '). A chave foi preenchida; complete os demais campos manualmente. Detalhe: ' + detalhe;
+          if(typeof swal === 'function') swal('Atenção', msg, 'warning');
+        }
+      });
+    }
+
     $('#tp_cte').change(() => {
       aplicarFinalidade();
     });
@@ -808,6 +889,10 @@
         $('#chave_origem_manual').val(chave).trigger('input');
         atualizarContadorChave();
         habilitaBtnSalarCTe();
+      }
+      if(tipoCteAtual() == '3'){
+        var selId = (e.params && e.params.data) ? e.params.data.id : $(this).val();
+        buscarPreencherOriginal(selId);
       }
     });
 
@@ -838,7 +923,7 @@
           $('#remetente-cnpj').html(c.cpf_cnpj)
           $('#remetente-ie').html(c.ie_rg)
           $('#remetente-endereco').html(c.rua + ', ' + c.numero)
-          $('#remetente-cidade').html(c.cidade.nome + ' (' + c.cidade.uf + ')')
+          $('#remetente-cidade').html(c.cidade ? c.cidade.nome + ' (' + c.cidade.uf + ')' : '')
 
           $('#box-remetente').css('display', 'block')
         }
@@ -855,7 +940,7 @@
           $('#destinatario-cnpj').html(c.cpf_cnpj)
           $('#destinatario-ie').html(c.ie_rg)
           $('#destinatario-endereco').html(c.rua + ', ' + c.numero)
-          $('#destinatario-cidade').html(c.cidade.nome + ' (' + c.cidade.uf + ')')
+          $('#destinatario-cidade').html(c.cidade ? c.cidade.nome + ' (' + c.cidade.uf + ')' : '')
 
           $('#box-destinatario').css('display', 'block')
         }
@@ -871,7 +956,7 @@
           $('#recebedor-cnpj').html(c.cpf_cnpj)
           $('#recebedor-ie').html(c.ie_rg)
           $('#recebedor-endereco').html(c.rua + ', ' + c.numero)
-          $('#recebedor-cidade').html(c.cidade.nome + ' (' + c.cidade.uf + ')')
+          $('#recebedor-cidade').html(c.cidade ? c.cidade.nome + ' (' + c.cidade.uf + ')' : '')
 
           $('#box-recebedor').css('display', 'block')
         }
@@ -887,7 +972,7 @@
           $('#expedidor-cnpj').html(c.cpf_cnpj)
           $('#expedidor-ie').html(c.ie_rg)
           $('#expedidor-endereco').html(c.rua + ', ' + c.numero)
-          $('#expedidor-cidade').html(c.cidade.nome + ' (' + c.cidade.uf + ')')
+          $('#expedidor-cidade').html(c.cidade ? c.cidade.nome + ' (' + c.cidade.uf + ')' : '')
 
           $('#box-expedidor').css('display', 'block')
         }
@@ -913,7 +998,7 @@
           $('#tomador-outros-cnpj').html(c.cpf_cnpj)
           $('#tomador-outros-ie').html(c.ie_rg)
           $('#tomador-outros-endereco').html(c.rua + ', ' + c.numero)
-          $('#tomador-outros-cidade').html(c.cidade.nome + ' (' + c.cidade.uf + ')')
+          $('#tomador-outros-cidade').html(c.cidade ? c.cidade.nome + ' (' + c.cidade.uf + ')' : '')
           $('#box-tomador-outros').css('display', 'block')
 
           // Preencher endereço do tomador
@@ -1163,7 +1248,7 @@
         t += "<i class='fa fa-trash'></i></a></td>";
         t+= "</tr>";
 
-        SOMACOMPONENTES += parseFloat(v.valor.replace(',', '.'));
+        SOMACOMPONENTES += parseFloat(String(v.valor).replace(',', '.')) || 0;
       });
       $('#comps').val(JSON.stringify(COMPONENTES))
       $('#valor_receber').val(SOMACOMPONENTES.toFixed(2).replace(',', '.'));

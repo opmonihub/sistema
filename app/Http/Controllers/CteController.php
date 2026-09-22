@@ -528,7 +528,7 @@ class CteController extends Controller
 			$cte->chave_complementada = $vinculo['chave_complementada'];
 			$cte->ind_altera_toma = $vinculo['ind_altera_toma'];
 			$cte->cte_original_id = $vinculo['cte_original_id'];
-			$this->aplicarDerivacaoToma($cte, $business_id);
+		$this->aplicarDerivacaoToma($cte, $business_id);
 
 			$cte->save();
 
@@ -950,6 +950,30 @@ class CteController extends Controller
 			}
 		}
 
+		if($tpCte == 3){
+			$original559 = null;
+			if(!empty($cte->cte_original_id)){
+				$original559 = Cte::where('business_id', $business_id)->where('id', $cte->cte_original_id)->first();
+			}
+			if(!$original559){
+				$chave559 = $cte->chave_original ? preg_replace('/\D/', '', (string)$cte->chave_original) : '';
+				if($chave559 !== ''){
+					$q559 = Cte::where('business_id', $business_id)->where('chave', $chave559);
+					if(!empty($cte->id)){
+						$q559->where('id', '!=', $cte->id);
+					}
+					$original559 = $q559->first();
+				}
+			}
+			if($original559){
+				$ufIniNovo = $cte->municipioInicio ? $cte->municipioInicio->uf : null;
+				$ufIniOrig = $original559->municipioInicio ? $original559->municipioInicio->uf : null;
+				if($ufIniNovo && $ufIniOrig && $ufIniNovo != $ufIniOrig){
+					return response()->json('UF de início do substituto (' . $ufIniNovo . ') difere da UF de início do CT-e original (' . $ufIniOrig . '). A SEFAZ exige UFs iguais (rejeição 559).', 422);
+				}
+			}
+		}
+
 		$this->aplicarDerivacaoToma($cte, $business_id);
 		if($cte->isDirty('ind_altera_toma')){
 			$cte->save();
@@ -1281,6 +1305,88 @@ class CteController extends Controller
 		return response()->json($lista);
 	}
 
+	public function dadosOriginal($id){
+		$business_id = request()->session()->get('user.business_id');
+		$c = Cte::where('business_id', $business_id)
+		->where('id', $id)
+		->with(['medidas', 'componentes', 'documentosAnteriores'])
+		->first();
+		if(!$c){
+			\Log::warning('cte.dadosOriginal 404', ['business_id' => $business_id, 'id' => $id]);
+			return response()->json('CT-e original não encontrado para esta empresa/sessão.', 404);
+		}
+		$medidas = [];
+		foreach($c->medidas as $m){
+			$medidas[] = [
+				'unidade_medida' => (string)$m->cod_unidade,
+				'tipo_medida' => (string)$m->tipo_medida,
+				'quantidade' => (string)$m->quantidade_carga,
+			];
+		}
+		$componentes = [];
+		foreach($c->componentes as $comp){
+			$componentes[] = ['nome' => (string)$comp->nome, 'valor' => (string)$comp->valor];
+		}
+		$anteriores = [];
+		foreach($c->documentosAnteriores as $d){
+			$anteriores[] = [
+				'chave' => $d->chave_cte,
+				'cnpj' => $d->cnpj_emitente,
+				'ie' => $d->ie_emitente,
+				'uf' => $d->uf_emitente,
+			];
+		}
+		$dataEntrega = '';
+		if(!empty($c->data_previsata_entrega)){
+			try{
+				$dataEntrega = \Carbon\Carbon::parse($c->data_previsata_entrega)->format('d/m/Y');
+			}catch(\Exception $e){
+				$dataEntrega = '';
+			}
+		}
+		return response()->json([
+			'id' => $c->id,
+			'chave' => $c->chave,
+			'remetente_id' => $c->remetente_id,
+			'destinatario_id' => $c->destinatario_id,
+			'recebedor_id' => $c->recebedor_id,
+			'expedidor_id' => $c->expedidor_id,
+			'natureza_id' => $c->natureza_id,
+			'globalizado' => $c->globalizado,
+			'cst' => $c->cst,
+			'perc_icms' => (string)$c->perc_icms,
+			'tomador' => $c->tomador,
+			'tipo_servico' => $c->tipo_servico,
+			'tomador_outros_id' => $c->tomador_outros_id,
+			'cidade_envio' => $c->municipio_envio,
+			'cidade_inicio' => $c->municipio_inicio,
+			'cidade_fim' => $c->municipio_fim,
+			'rua_tomador' => $c->logradouro_tomador,
+			'numero_tomador' => $c->numero_tomador,
+			'bairro_tomador' => $c->bairro_tomador,
+			'cep_tomador' => $c->cep_tomador,
+			'cidade_tomador' => $c->municipio_tomador,
+			'valor_transporte' => (string)$c->valor_transporte,
+			'valor_receber' => (string)$c->valor_receber,
+			'valor_carga' => (string)$c->valor_carga,
+			'prod_predominante' => $c->produto_predominante,
+			'observacao' => $c->observacao,
+			'data_previsata_entrega' => $dataEntrega,
+			'retira' => $c->retira,
+			'detalhes_retira' => $c->detalhes_retira,
+			'modal_transp' => $c->modal,
+			'veiculo_id' => $c->veiculo_id,
+			'tpDoc' => $c->tpDoc,
+			'descOutros' => $c->descOutros,
+			'nDoc' => (string)$c->nDoc,
+			'vDocFisc' => (string)$c->vDocFisc,
+			'chave_nfe' => $c->chave_nfe,
+			'medidas' => $medidas,
+			'componentes' => $componentes,
+			'documentos_anteriores' => $anteriores,
+		]);
+	}
+
 	public function baixarXml($id){
 		if (!auth()->user()->can('user.create')) {
 			abort(403, 'Unauthorized action.');
@@ -1554,6 +1660,7 @@ class CteController extends Controller
 			$aprovadas->where('location_id', $select_location_id);
 		}
 		$aprovadas = $aprovadas->get();
+		$aprovadas->load('substitutos');
 
 		$canceladas = Cte::where('business_id', $business_id)
 		->whereBetween('created_at', [
@@ -1585,14 +1692,22 @@ class CteController extends Controller
 				$zip_file = public_path('xml_cte/'.$cnpj.'/'.'xml.zip');
 				$zip = new \ZipArchive();
 				$zip->open($zip_file, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+				$substituidosIgnorados = 0;
 				foreach($aprovadas as $n){
 
+					if($n->substitutos && $n->substitutos->where('estado', 'aprovado')->isNotEmpty()){
+						$substituidosIgnorados++;
+						continue;
+					}
 					if(file_exists(public_path('xml_cte/'.$cnpj.'/'.$n->chave.'.xml'))){
 						$zip->addFile(public_path('xml_cte/'.$cnpj.'/'.$n->chave.'.xml'), $n->chave . '.xml');
 					}
 
 				}
 				$zip->close();
+				if($substituidosIgnorados > 0){
+					array_push($msg, $substituidosIgnorados . " CT-e(s) substituído(s) excluído(s) do ZIP (vale o substituto).");
+				}
 			}catch(\Exception $e){
 				array_push($msg, "Erro ao gerar arquivo de XML!!");
 			}
