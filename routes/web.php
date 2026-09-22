@@ -209,44 +209,6 @@ Route::middleware(['authh', 'auth', 'SetSessionData', 'language', 'timezone', 'A
         
     });
 
-    Route::group(['prefix' => 'nuvemshop'], function () {
-        Route::get('/', 'NuvemShopAuthController@index');
-        Route::get('/auth', 'NuvemShopAuthController@auth');
-        Route::get('/app', 'NuvemShopAuthController@app');
-
-        Route::get('/config', 'NuvemShopController@config')->name('nuvemshop.config');
-        Route::post('/save', 'NuvemShopController@save');
-
-        Route::get('/categorias', 'NuvemShopController@categorias')->name('nuvemshop.categorias');
-        Route::get('/categoria-create', 'NuvemShopController@categoriaCreate')->name('nuvemshop.categoria-create');
-        Route::get('/categoria-edit/{id}', 'NuvemShopController@categoriaEdit')->name('nuvemshop.categoria-edit');
-        Route::get('/categoria_delete/{id}', 'NuvemShopController@categoria_delete');
-        Route::delete('/nuvemshop-destroy-categoria/{id}', 'NuvemShopController@destroyCategoria')->name('nuvemshop.destroy-categoria');
-        Route::post('/categoria-store', 'NuvemShopController@storeCategoria')->name('nuvemshop.store-categoria');
-
-
-        Route::get('/produtos', 'NuvemShopProdutoController@index')->name('nuvemshop.produtos');
-        Route::get('/produto-create', 'NuvemShopProdutoController@produtoCreate')->name('nuvemshop.produto-create');
-        Route::get('/produto-edit/{id}', 'NuvemShopProdutoController@produtoEdit')->name('nuvemshop.produto-edit');
-        Route::delete('/produto-destroy/{id}', 'NuvemShopProdutoController@produtoDestroy')->name('nuvemshop.produto-destroy');
-        Route::get('/produto-galeria/{id}', 'NuvemShopProdutoController@produtoGaleria')->name('nuvemshop.produto-galeria');
-        Route::delete('/produto-delete-imagem/{id}/{img_id}', 'NuvemShopProdutoController@imagemDestroy')->name('nuvemshop.destroy-imagem-produto');
-        Route::post('/store-imagem', 'NuvemShopProdutoController@storeImagem')->name('nuvemshop.store-produto-imagem');
-        Route::post('/store-produto', 'NuvemShopProdutoController@storeProduto')->name('nuvemshop.store-produto');
-
-
-        Route::get('/pedidos', 'NuvemShopPedidoController@index');
-        Route::get('/filtro', 'NuvemShopPedidoController@filtro');
-        Route::get('/detalhar/{id}', 'NuvemShopPedidoController@detalhar');
-        Route::get('/clientes', 'NuvemShopPedidoController@clientes');
-        Route::get('/imprimir/{id}', 'NuvemShopPedidoController@imprimir')->name('nuvemshop.imprimir');
-        Route::get('/gerarNFe/{id}', 'NuvemShopPedidoController@gerarNFe');
-        Route::post('/salvarVenda', 'NuvemShopPedidoController@salvarVenda');
-        Route::get('/verVenda/{id}', 'NuvemShopPedidoController@verVenda');
-        Route::get('/removerPedido/{id}', 'NuvemShopPedidoController@removerPedido');
-    });
-    
-
     Route::group(['prefix' => '/manifesto'], function(){
         Route::get('/', 'ManifestoController@index');
         Route::get('/byLocation/{location_id}', 'ManifestoController@getByLocation');
