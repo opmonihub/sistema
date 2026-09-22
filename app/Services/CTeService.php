@@ -516,7 +516,9 @@ class CTeService{
 				if ($chSub !== '') {
 					$infCteSub = new \stdClass();
 					$infCteSub->chCte = $chSub;
-					$infCteSub->indAlteraToma = !empty($cteEmit->ind_altera_toma) ? '1' : '';
+					if (!empty($cteEmit->ind_altera_toma)) {
+						$infCteSub->indAlteraToma = '1';
+					}
 					$cte->taginfCteSub($infCteSub);
 				}
 			}
