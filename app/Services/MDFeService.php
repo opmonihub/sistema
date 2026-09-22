@@ -120,9 +120,7 @@ class MDFeService{
 		$std->xBairro = $config->bairro;
 		$std->cMun = $config->cidade->codigo;
 		$std->xMun = $config->cidade->nome;
-		$cep = str_replace("-", "", $config->cep);
-		$cep = str_replace(".", "", $cep);
-		$std->CEP = $cep;
+		$std->CEP = \App\Helpers\FiscalHelper::cep($config->cep);
 		$std->UF = $config->cidade->uf;
 		$std->fone = '';
 		$std->email = '';
@@ -478,14 +476,14 @@ class MDFeService{
 			}
 
 			$localCarrega = new \stdClass();
-			$localCarrega->CEP = $mdfe->cep_carrega;
+			$localCarrega->CEP = \App\Helpers\FiscalHelper::cep($mdfe->cep_carrega);
 			// $localCarrega->latitude = null;
 			// $localCarrega->longitude = null;
 			$localCarrega->latitude = $this->preparaCordenada($mdfe->latitude_carregamento);
 			$localCarrega->longitude = $this->preparaCordenada($mdfe->longitude_carregamento);
 
 			$localDescarrega = new \stdClass();
-			$localDescarrega->CEP = $mdfe->cep_descarrega;
+			$localDescarrega->CEP = \App\Helpers\FiscalHelper::cep($mdfe->cep_descarrega);
 			// $localDescarrega->latitude = null;
 			// $localDescarrega->longitude = null;
 			$localDescarrega->latitude = $this->preparaCordenada($mdfe->latitude_descarregamento);
