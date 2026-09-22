@@ -249,6 +249,7 @@ class NFCeService{
 			if($i->variations){
 				$stdProd->xProd .= " " . ($i->variations->name != "DUMMY" ? $i->variations->name : '');
 			}
+			$stdProd->xProd = \App\Helpers\FiscalHelper::truncate($stdProd->xProd, 120);
 			$ncm = $i->product->ncm;
 			$ncm = str_replace(".", "", $ncm);
 			$stdProd->NCM = $ncm;

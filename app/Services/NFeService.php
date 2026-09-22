@@ -296,7 +296,7 @@ class NFeService{
 			// $stdProd->cEAN = $i->product->codigo_barras != '' ? $i->product->codigo_barras : 'SEM GTIN';
 			// $stdProd->cEANTrib = $i->product->codigo_barras != '' ? $i->product->codigo_barras : 'SEM GTIN';
 			$stdProd->cProd = $i->product->sku;
-			$stdProd->xProd = $i->product->name;
+			$stdProd->xProd = \App\Helpers\FiscalHelper::truncate($i->product->name, 120);
 
 			if($i->variations){
 				// $stdProd->xProd .= " " . ($i->variations->name != "DUMMY" ? $i->variations->name : '');

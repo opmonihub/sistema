@@ -182,7 +182,7 @@ class NFeEntradaService {
 			$stdProd->cEAN = strlen($i->product->sku) < 7 ? 'SEM GTIN' : $i->product->sku;
 			$stdProd->cEANTrib = strlen($i->product->sku) < 7 ? 'SEM GTIN' : $i->product->sku;
 			$stdProd->cProd = $i->product->id;
-			$stdProd->xProd = $i->product->name;
+			$stdProd->xProd = \App\Helpers\FiscalHelper::truncate($i->product->name, 120);
 			$ncm = $i->product->ncm;
 			$ncm = str_replace(".", "", $ncm);
 			$stdProd->NCM = $ncm;

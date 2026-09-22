@@ -220,7 +220,7 @@ class DevolucaoService{
 			$stdProd->cEANTrib = $cod ? $i->codBarras : 'SEM GTIN';
 
 			$stdProd->cProd = $i->cod;
-			$stdProd->xProd = $i->nome;
+			$stdProd->xProd = \App\Helpers\FiscalHelper::truncate($i->nome, 120);
 			$ncm = $i->ncm;
 			$ncm = str_replace(".", "", $ncm);
 			$stdProd->NCM = $ncm;
