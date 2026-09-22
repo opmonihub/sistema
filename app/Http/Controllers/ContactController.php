@@ -1281,20 +1281,20 @@ return $contacts->rawColumns(['action', 'opening_balance', 'credit_limit', 'pay_
             return $notAllowed;
         }
 
+        $contact_id = $request->input('contact_id');
+        $business_id = request()->session()->get('user.business_id');
+
+        $contact = Contact::where('business_id', $business_id)->find($contact_id);
+        if (empty($contact)) {
+            abort(404);
+        }
+
         try {
             $data = $request->only(['to_email', 'subject', 'email_body', 'cc', 'bcc']);
             $emails_array = array_map('trim', explode(',', $data['to_email']));
 
-            $contact_id = $request->input('contact_id');
-            $business_id = request()->session()->get('user.business_id');
-
             $start_date = request()->input('start_date');
             $end_date =  request()->input('end_date');
-
-            $contact = Contact::where('business_id', $business_id)->find($contact_id);
-            if (empty($contact)) {
-                abort(404);
-            }
 
             $ledger_details = $this->transactionUtil->getLedgerDetails($contact_id, $start_date, $end_date);
 

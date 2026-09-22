@@ -6,7 +6,7 @@ class FiscalHelper
 {
     public static function onlyDigits(?string $v): string
     {
-        return preg_replace('/\D/', '', (string) $v);
+        return preg_replace('/\D/', '', (string) $v) ?? '';
     }
 
     public static function cep(?string $v): string
