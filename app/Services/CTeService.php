@@ -74,10 +74,11 @@ class CTeService{
 		$ide->tpEmis = '1'; 
 		$ide->cDV = $cDV; 
 		$ide->tpAmb = (int)$config->ambiente; 
-		$ide->tpCTe = '0'; 
-
-		// 0- CT-e Normal; 1 - CT-e de Complemento de Valores;
-// 2 -CT-e de Anulação; 3 - CT-e Substituto
+		$tpCTe = isset($cteEmit->tp_cte) ? (int) $cteEmit->tp_cte : 0;
+		if (!in_array($tpCTe, [0, 1, 3], true)) {
+			$tpCTe = 0;
+		}
+		$ide->tpCTe = (string) $tpCTe; 
 
 		$ide->procEmi = '0'; 
 		$ide->verProc = '4.0'; 
@@ -418,7 +419,15 @@ class CTeService{
 		$icms->infAdFisco = '';
 		$cte->tagicms($icms);
 
-		$cte->taginfCTeNorm();              // Grupo de informações do CT-e Normal e Substituto
+		if ($tpCTe === 1) {
+			$chComp = isset($cteEmit->chave_complementada) ? preg_replace('/[^0-9]/', '', (string) $cteEmit->chave_complementada) : '';
+			if ($chComp !== '') {
+				$infCteComp = new \stdClass();
+				$infCteComp->chCTe = $chComp;
+				$cte->taginfCTeComp($infCteComp);
+			}
+		} else {
+			$cte->taginfCTeNorm();
 
 		// Documentos de Transporte Anterior (obrigatório para Subcontratação, Redespacho, Redespacho Intermediário)
 		if(in_array($cteEmit->tipo_servico, ['1', '2', '3']) && $cteEmit->documentosAnteriores && count($cteEmit->documentosAnteriores) > 0){
@@ -501,6 +510,17 @@ class CTeService{
 		$aereo->tarifa_cTar = ''; 
 		$aereo->tarifa_vTar = 100.00; 
 		$cte->tagaereo($aereo);
+
+			if ($tpCTe === 3) {
+				$chSub = isset($cteEmit->chave_original) ? preg_replace('/[^0-9]/', '', (string) $cteEmit->chave_original) : '';
+				if ($chSub !== '') {
+					$infCteSub = new \stdClass();
+					$infCteSub->chCte = $chSub;
+					$infCteSub->indAlteraToma = !empty($cteEmit->ind_altera_toma) ? '1' : '';
+					$cte->taginfCteSub($infCteSub);
+				}
+			}
+		}
 
 		$stdCompl = new \stdClass();
 		$stdCompl->xObs = $cteEmit->observacao;
