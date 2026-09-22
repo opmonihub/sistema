@@ -168,6 +168,10 @@ class DocumentAndNoteController extends Controller
             ]
         ];
 
+        //Aliases legados: views antigas enviam App\Contact / App\User.
+        $app_notable['App\User'] = $app_notable['App\Models\User'];
+        $app_notable['App\Contact'] = $app_notable['App\Models\Contact'];
+
         if (isset($app_notable[$notable_type])) {
             return $app_notable[$notable_type]['permissions'];
         } else {
@@ -185,6 +189,8 @@ class DocumentAndNoteController extends Controller
                 }
             }
         }
+
+        return [];
     }
 
     /**

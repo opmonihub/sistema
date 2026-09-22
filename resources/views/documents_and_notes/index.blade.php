@@ -1,5 +1,5 @@
 <div class="table-responsive">
-    @if(in_array('create', $permissions))
+    @if(!empty($permissions) && in_array('create', $permissions))
         <div class="pull-right">
             <button type="button" class="btn btn-sm btn-primary docs_and_notes_btn pull-right" data-href="{{action('DocumentAndNoteController@create', ['notable_id' => $notable_id, 'notable_type' => $notable_type])}}">
                 @lang('messages.add')&nbsp;
