@@ -343,6 +343,45 @@ class CteController extends Controller
 		return ['tp_cte' => 1, 'chave_original' => null, 'chave_complementada' => $chave, 'ind_altera_toma' => null, 'cte_original_id' => $cte_original_id];
 	}
 
+	private function validarVinculoPreSefaz($cte, $tpCte, $chave, $cnpj, $cte_service){
+		$rotulo = $tpCte == 3 ? 'substituto (chave do CT-e original)' : 'complemento (chave do CT-e complementado)';
+		$chave = $chave ? preg_replace('/\D/', '', (string) $chave) : '';
+		if($chave === ''){
+			return 'Informe a chave de acesso do CT-e de origem para emitir CT-e ' . $rotulo . '.';
+		}
+		if(strlen($chave) != 44 || !ctype_digit($chave)){
+			return 'Chave de origem inválida para CT-e ' . $rotulo . ': a chave deve ter 44 dígitos numéricos. Confira a chave e tente novamente.';
+		}
+		$propria = preg_replace('/\D/', '', (string) ($cte->chave ?? ''));
+		if($propria !== '' && $chave === $propria){
+			return 'A chave de origem não pode ser a mesma chave deste CT-e. Informe a chave do CT-e de origem.';
+		}
+		if(substr($chave, 6, 14) !== $cnpj){
+			return 'A chave de origem pertence a outro CNPJ emitente. O CT-e de substituição/complemento só pode referenciar CT-e emitido pelo mesmo CNPJ.';
+		}
+		$consulta = $cte_service->consultaChave($chave);
+		if(!is_array($consulta) || !empty($consulta['erro'])){
+			$detalhe = '';
+			if(is_array($consulta) && isset($consulta['data']) && is_string($consulta['data']) && trim($consulta['data']) !== ''){
+				$detalhe = ' Detalhe: ' . trim($consulta['data']);
+			}
+			return 'Não foi possível validar o CT-e de origem na SEFAZ. Tente novamente.' . $detalhe;
+		}
+		$dados = $consulta;
+		if(isset($consulta['retConsSitCTe']) && is_array($consulta['retConsSitCTe'])){
+			$dados = $consulta['retConsSitCTe'];
+		}
+		$cStat = isset($dados['cStat']) ? (string) $dados['cStat'] : '';
+		$infProt = isset($dados['protCTe']['infProt']) && is_array($dados['protCTe']['infProt']) ? $dados['protCTe']['infProt'] : null;
+		$nProt = $infProt !== null && isset($infProt['nProt']) ? (string) $infProt['nProt'] : '';
+		if($cStat !== '100' || $nProt === ''){
+			$motivo = isset($dados['xMotivo']) ? (string) $dados['xMotivo'] : 'situação não autorizada';
+			$prefixo = $cStat !== '' ? '[' . $cStat . '] ' . $motivo : $motivo;
+			return 'O CT-e de origem não está autorizado na SEFAZ (' . $prefixo . '). Só é possível emitir CT-e substituto/complemento de um CT-e autorizado.';
+		}
+		return null;
+	}
+
 	public function update(Request $request, $id){
 		$business_id = request()->session()->get('user.business_id');
 		$user_id = request()->session()->get('user.id');
@@ -642,6 +681,8 @@ class CteController extends Controller
 			return redirect('/cte/ver/'.$cte->id);
 		}
 
+		$cte->load(['original', 'substitutos']);
+
 		return view('cte.gerar')
 		->with(compact('cte'));
 
@@ -779,25 +820,32 @@ class CteController extends Controller
 			return response()->json('CT-e não encontrado para esta empresa/sessão. Atualize a página e tente novamente.', 403);
 		}
 
-		$chavesNfe = preg_split('/[;,]/', $cte->chave_nfe ?? '', -1, PREG_SPLIT_NO_EMPTY);
-		foreach($chavesNfe as $chaveNfe){
-			$chaveNfe = trim($chaveNfe);
-			if(strlen($chaveNfe) != 44){
-				continue;
-			}
+		$tpCte = (int)($cte->tp_cte ?? 0);
+		if(!in_array($tpCte, [0, 1, 3], true)){
+			$tpCte = 0;
+		}
 
-			$cteDuplicado = Cte::where('business_id', $business_id)
-			->where('id', '!=', $cte->id)
-			->where('estado', 'aprovado')
-			->where('cte_numero', '>', 0)
-			->where('chave_nfe', 'like', '%' . $chaveNfe . '%')
-			->first();
+		if($tpCte == 0){
+			$chavesNfe = preg_split('/[;,]/', $cte->chave_nfe ?? '', -1, PREG_SPLIT_NO_EMPTY);
+			foreach($chavesNfe as $chaveNfe){
+				$chaveNfe = trim($chaveNfe);
+				if(strlen($chaveNfe) != 44){
+					continue;
+				}
 
-			if($cteDuplicado){
-				return response()->json(
-					'Esta NF-e já está vinculada ao CT-e autorizado número ' . $cteDuplicado->cte_numero . '. Chave NF-e: ' . $chaveNfe,
-					402
-				);
+				$cteDuplicado = Cte::where('business_id', $business_id)
+				->where('id', '!=', $cte->id)
+				->where('estado', 'aprovado')
+				->where('cte_numero', '>', 0)
+				->where('chave_nfe', 'like', '%' . $chaveNfe . '%')
+				->first();
+
+				if($cteDuplicado){
+					return response()->json(
+						'Esta NF-e já está vinculada ao CT-e autorizado número ' . $cteDuplicado->cte_numero . '. Chave NF-e: ' . $chaveNfe,
+						402
+					);
+				}
 			}
 		}
 
@@ -823,6 +871,14 @@ class CteController extends Controller
 		], $config);
 
 
+		$chaveVinculo = $tpCte == 3 ? $cte->chave_original : ($tpCte == 1 ? $cte->chave_complementada : null);
+		if($tpCte != 0){
+			$erroVinculo = $this->validarVinculoPreSefaz($cte, $tpCte, $chaveVinculo, $cnpj, $cte_service);
+			if($erroVinculo){
+				return response()->json($erroVinculo, 422);
+			}
+		}
+
 		$doc = $cte_service->gerarCTe($cte);
 		if (!isset($doc['erros_xml'])) {
 			// return response()->json($signed, 200);
@@ -842,6 +898,30 @@ class CteController extends Controller
 				}
 				$cte->cte_numero = $doc['nCte'];
 				$cte->recibo = $resultado['success'];
+				if($tpCte != 0){
+					$chaveOrigem = $chaveVinculo ? preg_replace('/\D/', '', (string) $chaveVinculo) : '';
+					$original = null;
+					if($chaveOrigem !== ''){
+						$original = Cte::where('business_id', $business_id)
+						->where('chave', $chaveOrigem)
+						->where('id', '!=', $cte->id)
+						->first();
+					}
+					if(!$original && $cte->cte_original_id){
+						$original = Cte::where('business_id', $business_id)
+						->where('id', $cte->cte_original_id)
+						->first();
+					}
+					if($original){
+						$cte->cte_original_id = $original->id;
+						if($tpCte == 3 && !$cte->chave_original && $original->chave){
+							$cte->chave_original = $original->chave;
+						}
+						if($tpCte == 1 && !$cte->chave_complementada && $original->chave){
+							$cte->chave_complementada = $original->chave;
+						}
+					}
+				}
 				$cte->save();
 				$config->save();
 				$data = [
@@ -1049,6 +1129,8 @@ class CteController extends Controller
 		if($cte->cte_numero == 0){
 			return redirect('/cte/gerar/'.$cte->id);
 		}
+
+		$cte->load(['original', 'substitutos']);
 
 		return view('cte.ver')
 		->with(compact('cte', 'business'));

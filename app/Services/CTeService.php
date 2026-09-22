@@ -700,6 +700,23 @@ class CTeService{
 		}
 	}
 
+	public function consultaChave($chave){
+		try {
+			$response = $this->tools->sefazConsultaChave($chave);
+			if(!$response){
+				return ['erro' => true, 'data' => 'SEFAZ sem resposta na consulta da chave.', 'status' => 422];
+			}
+			$stdCl = new Standardize($response);
+			$arr = $stdCl->toArray();
+			if(!is_array($arr)){
+				return ['erro' => true, 'data' => 'SEFAZ retornou resposta inválida na consulta da chave.', 'status' => 422];
+			}
+			return $arr;
+		} catch (\Exception $e) {
+			return ['erro' => true, 'data' => $e->getMessage(), 'status' => 422];
+		}
+	}
+
 	public function consultar($cte){
 		try {
 
