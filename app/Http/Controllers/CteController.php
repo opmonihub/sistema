@@ -308,6 +308,41 @@ class CteController extends Controller
 		return $extension;
 	}
 
+	private function resolveVinculoSubstituicao(Request $request, $business_id){
+		$tp_cte = (int)($request->tp_cte ?? 0);
+		if(!in_array($tp_cte, [0, 1, 3], true)){
+			$tp_cte = 0;
+		}
+
+		if($tp_cte == 0){
+			return ['tp_cte' => 0, 'chave_original' => null, 'chave_complementada' => null, 'ind_altera_toma' => null, 'cte_original_id' => null];
+		}
+
+		$manual = $tp_cte == 3 ? $request->chave_original : $request->chave_complementada;
+		$manual = $manual ? preg_replace('/\D/', '', $manual) : '';
+		$chave = ($manual != '' ? $manual : null);
+		$cte_original_id = null;
+
+		if($chave){
+			$vinculado = Cte::where('business_id', $business_id)->where('chave', $chave)->first();
+			if($vinculado) $cte_original_id = $vinculado->id;
+		}
+
+		if(!$cte_original_id && $request->cte_original_id){
+			$original = Cte::where('business_id', $business_id)->where('id', $request->cte_original_id)->first();
+			if($original){
+				$cte_original_id = $original->id;
+				if(!$chave) $chave = $original->chave;
+			}
+		}
+
+		if($tp_cte == 3){
+			return ['tp_cte' => 3, 'chave_original' => $chave, 'chave_complementada' => null, 'ind_altera_toma' => !empty($request->ind_altera_toma) ? 1 : null, 'cte_original_id' => $cte_original_id];
+		}
+
+		return ['tp_cte' => 1, 'chave_original' => null, 'chave_complementada' => $chave, 'ind_altera_toma' => null, 'cte_original_id' => $cte_original_id];
+	}
+
 	public function update(Request $request, $id){
 		$business_id = request()->session()->get('user.business_id');
 		$user_id = request()->session()->get('user.id');
@@ -364,6 +399,13 @@ class CteController extends Controller
 			$cte->cst = $request->cst;
 			$cte->perc_icms = str_replace(",", ".", $request->perc_icms);
 			$cte->location_id = $request->select_location_id ?? $config->locations[0]->id;
+
+			$vinculo = $this->resolveVinculoSubstituicao($request, $business_id);
+			$cte->tp_cte = $vinculo['tp_cte'];
+			$cte->chave_original = $vinculo['chave_original'];
+			$cte->chave_complementada = $vinculo['chave_complementada'];
+			$cte->ind_altera_toma = $vinculo['ind_altera_toma'];
+			$cte->cte_original_id = $vinculo['cte_original_id'];
 
 			$cte->save();
 
@@ -492,6 +534,8 @@ class CteController extends Controller
 				'perc_icms' => str_replace(",", ".", $request->perc_icms),
 				'location_id' => $request->select_location_id ?? $config->locations[0]->id
 			];
+
+			$data = array_merge($data, $this->resolveVinculoSubstituicao($request, $business_id));
 
 			$result = Cte::create($data);
 

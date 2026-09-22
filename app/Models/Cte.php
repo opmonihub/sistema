@@ -14,7 +14,8 @@ class Cte extends Model
         'produto_predominante', 'data_previsata_entrega', 'observacao',
         'sequencia_cce', 'cte_numero', 'chave', 'path_xml', 'estado', 'retira', 
         'detalhes_retira', 'modal', 'veiculo_id', 'tpDoc', 'descOutros', 'nDoc', 'vDocFisc', 
-        'location_id', 'globalizado', 'cst', 'perc_icms', 'recebedor_id', 'expedidor_id', 'recibo'
+        'location_id', 'globalizado', 'cst', 'perc_icms', 'recebedor_id', 'expedidor_id', 'recibo',
+        'tp_cte', 'chave_original', 'chave_complementada', 'ind_altera_toma', 'cte_original_id'
     ];
 
     // 0-Remetente; 1-Expedidor; 2-Recebedor; 3-Destinatário; 4-Outros
@@ -33,6 +34,14 @@ class Cte extends Model
 
     public function documentosAnteriores(){
         return $this->hasMany(CteDocumentoAnterior::class, 'cte_id', 'id');
+    }
+
+    public function original(){
+        return $this->belongsTo(Cte::class, 'cte_original_id');
+    }
+
+    public function substitutos(){
+        return $this->hasMany(Cte::class, 'cte_original_id', 'id');
     }
 
     public function componentes(){
