@@ -40,7 +40,7 @@ class CteController extends Controller
 			$user_id = request()->session()->get('user.id');
 			$ctes = Cte::where('business_id', $business_id)
 			->orderBy('id', 'desc')
-			->select(['id', 'valor_transporte', 'valor_receber', 'valor_carga', 'produto_predominante', 'data_previsata_entrega', 'estado', 'remetente_id', 'destinatario_id', 'created_at']);
+			->select(['id', 'cte_numero', 'valor_transporte', 'valor_receber', 'valor_carga', 'produto_predominante', 'data_previsata_entrega', 'estado', 'remetente_id', 'destinatario_id', 'created_at']);
 
 
 			return Datatables::of($ctes)
@@ -78,6 +78,18 @@ class CteController extends Controller
 			->addColumn('destinatario', function ($row) {
 				$dest = Contact::find($row->destinatario_id);
 				return $dest->name;
+			})
+
+			->addColumn('numero_cte', function ($row) {
+				return $row->cte_numero > 0 ? $row->cte_numero : '--';
+			})
+
+			->filterColumn('numero_cte', function ($query, $keyword) {
+				$query->where('ctes.cte_numero', 'like', "%{$keyword}%");
+			})
+
+			->orderColumn('numero_cte', function ($query, $order) {
+				$query->orderBy('ctes.cte_numero', $order);
 			})
 
 			->addColumn('action', function ($row) {
@@ -351,6 +363,64 @@ class CteController extends Controller
 		return ['tp_cte' => 1, 'chave_original' => null, 'chave_complementada' => $chave, 'ind_altera_toma' => null, 'cte_original_id' => $cte_original_id];
 	}
 
+	private function docDoTomadorCte($cte){
+		$toma = (int)($cte->tomador ?? 0);
+		if(!in_array($toma, [0, 1, 2, 3, 4], true)){
+			$toma = 0;
+		}
+		if($toma === 4){
+			$contato = $cte->tomadorOutros;
+			$doc = $contato ? preg_replace('/\D/', '', (string)$contato->cpf_cnpj) : '';
+			return ['toma' => 4, 'doc' => $doc];
+		}
+		$mapa = [0 => 'remetente', 1 => 'expedidor', 2 => 'recebedor', 3 => 'destinatario'];
+		$relacao = $mapa[$toma];
+		$contato = $cte->$relacao;
+		$doc = $contato ? preg_replace('/\D/', '', (string)$contato->cpf_cnpj) : '';
+		return ['toma' => $toma, 'doc' => $doc];
+	}
+
+	private function derivarIndAlteraToma($novo, $original){
+		if(!$original){
+			return false;
+		}
+		$origem = $this->docDoTomadorCte($original);
+		if($novo['toma'] !== $origem['toma']){
+			return 1;
+		}
+		if($novo['doc'] !== '' && $origem['doc'] !== ''){
+			return $novo['doc'] !== $origem['doc'] ? 1 : null;
+		}
+		return false;
+	}
+
+	private function aplicarDerivacaoToma($cte, $business_id){
+		if((int)($cte->tp_cte ?? 0) !== 3){
+			return;
+		}
+		$original = null;
+		if(!empty($cte->cte_original_id)){
+			$original = Cte::where('business_id', $business_id)->where('id', $cte->cte_original_id)->first();
+		}
+		if(!$original){
+			$chave = $cte->chave_original ? preg_replace('/\D/', '', (string)$cte->chave_original) : '';
+			if($chave !== ''){
+				$query = Cte::where('business_id', $business_id)->where('chave', $chave);
+				if(!empty($cte->id)){
+					$query->where('id', '!=', $cte->id);
+				}
+				$original = $query->first();
+			}
+		}
+		if(!$original || (!empty($cte->id) && $original->id == $cte->id)){
+			return;
+		}
+		$derivado = $this->derivarIndAlteraToma($this->docDoTomadorCte($cte), $original);
+		if($derivado !== false){
+			$cte->ind_altera_toma = $derivado;
+		}
+	}
+
 	private function validarVinculoSintatico($cte, $tpCte, $chave, $cnpj){
 		$rotulo = $tpCte == 3 ? 'substituto (chave do CT-e original)' : 'complemento (chave do CT-e complementado)';
 		$chave = $chave ? preg_replace('/\D/', '', (string) $chave) : '';
@@ -458,6 +528,7 @@ class CteController extends Controller
 			$cte->chave_complementada = $vinculo['chave_complementada'];
 			$cte->ind_altera_toma = $vinculo['ind_altera_toma'];
 			$cte->cte_original_id = $vinculo['cte_original_id'];
+			$this->aplicarDerivacaoToma($cte, $business_id);
 
 			$cte->save();
 
@@ -588,6 +659,10 @@ class CteController extends Controller
 			];
 
 			$data = array_merge($data, $this->resolveVinculoSubstituicao($request, $business_id));
+
+			$tmp = new Cte($data);
+			$this->aplicarDerivacaoToma($tmp, $business_id);
+			$data['ind_altera_toma'] = $tmp->ind_altera_toma;
 
 			$result = Cte::create($data);
 
@@ -873,6 +948,11 @@ class CteController extends Controller
 			if($erroVinculo){
 				return response()->json($erroVinculo, 422);
 			}
+		}
+
+		$this->aplicarDerivacaoToma($cte, $business_id);
+		if($cte->isDirty('ind_altera_toma')){
+			$cte->save();
 		}
 
 		$cte_service = new CTeService([

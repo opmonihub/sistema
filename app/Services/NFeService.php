@@ -838,39 +838,49 @@ class NFeService{
 		}
 
 
-		$stdFat = new \stdClass();
-		$stdFat->nFat = (int)$lastNumero+1;
-		$stdFat->vOrig = $this->format($somaProdutos);
-		if($totalDesconto > 0)
-			$stdFat->vDesc = $this->format($totalDesconto);
-		$stdFat->vLiq = $this->format($somaProdutos - $totalDesconto);
+		$isVista = $venda->forma_pagamento == 'a_vista' || $venda->payment_status == 'paid';
+		if(!$isVista){
+			$stdFat = new \stdClass();
+			$stdFat->nFat = (int)$lastNumero+1;
+			$stdFat->vOrig = $this->format($somaProdutos);
+			if($totalDesconto > 0)
+				$stdFat->vDesc = $this->format($totalDesconto);
+			$stdFat->vLiq = $this->format($somaProdutos - $totalDesconto);
 
-		$fatura = $nfe->tagfat($stdFat);
-		
-		if(!$venda->natureza->bonificacao){
-			if(count($venda->payment_lines) > 1){
-				$contFatura = 1;
+			$fatura = $nfe->tagfat($stdFat);
 
-				foreach($venda->payment_lines as $ft){
+			if(!$venda->natureza->bonificacao){
+				if(count($venda->payment_lines) > 1){
+					$contFatura = 1;
 
+					foreach($venda->payment_lines as $ft){
+
+						$stdDup = new \stdClass();
+						$stdDup->nDup = "00".$contFatura;
+						$stdDup->dVenc = substr($ft->vencimento, 0, 10);
+						$stdDup->vDup = $this->format($ft->amount);
+
+						$nfe->tagdup($stdDup);
+						$contFatura++;
+					}
+				}elseif(count($venda->payment_lines) == 1){
+					$pay = $venda->payment_lines[0];
 					$stdDup = new \stdClass();
-					$stdDup->nDup = "00".$contFatura;
-					$stdDup->dVenc = substr($ft->vencimento, 0, 10);
-					$stdDup->vDup = $this->format($ft->amount);
+					$stdDup->nDup = '001';
+				// if($pay->paid_on) $stdDup->dVenc = substr($pay->paid_on, 0, 10);
+					if($pay->vencimento) $stdDup->dVenc = $pay->vencimento;
+					else $stdDup->dVenc = date('Y-m-d');
+					$stdDup->vDup =  $this->format($somaProdutos-$totalDesconto);
 
 					$nfe->tagdup($stdDup);
-					$contFatura++;
-				}
-			}else{
-				$pay = $venda->payment_lines[0];
-				$stdDup = new \stdClass();
-				$stdDup->nDup = '001';
-			// if($pay->paid_on) $stdDup->dVenc = substr($pay->paid_on, 0, 10);
-				if($pay->vencimento) $stdDup->dVenc = $pay->vencimento;
-				else $stdDup->dVenc = date('Y-m-d');
-				$stdDup->vDup =  $this->format($somaProdutos-$totalDesconto);
+				}else{
+					$stdDup = new \stdClass();
+					$stdDup->nDup = '001';
+					$stdDup->dVenc = date('Y-m-d');
+					$stdDup->vDup = $this->format($somaProdutos-$totalDesconto);
 
-				$nfe->tagdup($stdDup);
+					$nfe->tagdup($stdDup);
+				}
 			}
 		}
 
@@ -897,7 +907,7 @@ class NFeService{
 			// $stdDetPag->tBand = $venda->bandeira_cartao;
 			$stdDetPag->tpIntegra = 2;
 		}
-		$stdDetPag->indPag = $venda->forma_pagamento == 'a_vista' ?  0 : 1; 
+		$stdDetPag->indPag = $isVista ? 0 : 1;
 
 		$detPag = $nfe->tagdetPag($stdDetPag);
 

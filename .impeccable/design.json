@@ -1,0 +1,285 @@
+{
+    "components": [
+        {
+            "css": ".ds-btn-primary { background: #6777EF; color: #fff; padding: 8px 16px; border: none; border-radius: 3px; font-family: Nunito, Arial, sans-serif; font-weight: 700; transition: background 0.15s ease; } .ds-btn-primary:hover { background: #357ca5; } .ds-btn-primary:focus-visible { outline: 2px solid #357ca5; outline-offset: 2px; }",
+            "description": "Acao principal fiscal: salvar, filtrar, emitir.",
+            "html": "<button class=\"ds-btn-primary\">Salvar</button>",
+            "kind": "button",
+            "name": "Primary Button",
+            "refersTo": "button-primary"
+        },
+        {
+            "css": ".ds-input { background: #fff; color: #757575; border: 1px solid #e3eaef; border-radius: 3px; padding: 8px 12px; font-family: Nunito, Arial, sans-serif; } .ds-input:focus { border-color: #6777EF; outline: none; }",
+            "description": "Campo padrao de formularios fiscais.",
+            "html": "<input class=\"ds-input\" placeholder=\"CNPJ / chave\" />",
+            "kind": "input",
+            "name": "Text Field",
+            "refersTo": "input-default"
+        },
+        {
+            "css": ".ds-card { background: #fff; border: 1px solid #e3eaef; border-radius: 4px; padding: 16px; } .ds-card h3 { font-family: Nunito, Arial, sans-serif; font-weight: 700; color: #5a5c69; margin: 0 0 8px; }",
+            "description": "Container padrao de secoes e tabelas.",
+            "html": "<div class=\"ds-card\"><h3>Cliente</h3><p>Conteudo fiscal</p></div>",
+            "kind": "card",
+            "name": "Card",
+            "refersTo": "card-default"
+        }
+    ],
+    "extensions": {
+        "breakpoints": [
+            {
+                "name": "sm",
+                "value": "576px"
+            },
+            {
+                "name": "md",
+                "value": "768px"
+            },
+            {
+                "name": "lg",
+                "value": "992px"
+            },
+            {
+                "name": "xl",
+                "value": "1200px"
+            }
+        ],
+        "colorMeta": {
+            "bg-soft": {
+                "canonical": "#f8f8f8",
+                "displayName": "Fundo Suave",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#1a1c1e",
+                    "#3a3f44",
+                    "#5a5c69",
+                    "#757575",
+                    "#a0a6ad",
+                    "#c9d0d6",
+                    "#e3eaef",
+                    "#f8f8f8"
+                ]
+            },
+            "danger": {
+                "canonical": "#fc544b",
+                "displayName": "Perigo Fiscal",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#4a1110",
+                    "#7a1e1c",
+                    "#a92e2b",
+                    "#fc544b",
+                    "#fd7a72",
+                    "#fea49e",
+                    "#fecbc8",
+                    "#fee9e7"
+                ]
+            },
+            "dark": {
+                "canonical": "#5a5c69",
+                "displayName": "Grafite",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#14151a",
+                    "#23252d",
+                    "#353844",
+                    "#5a5c69",
+                    "#7d8190",
+                    "#a3a7b3",
+                    "#c9ccd4",
+                    "#edeef1"
+                ]
+            },
+            "info": {
+                "canonical": "#3abaf4",
+                "displayName": "Info",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#0b2f3f",
+                    "#134e68",
+                    "#1d6f95",
+                    "#3abaf4",
+                    "#6cc8f7",
+                    "#9cdafa",
+                    "#c5eafc",
+                    "#e7f6fe"
+                ]
+            },
+            "light-border": {
+                "canonical": "#e3eaef",
+                "displayName": "Borda Clara",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#2a2e33",
+                    "#4a5058",
+                    "#6b7380",
+                    "#9aa2ad",
+                    "#b9c0c8",
+                    "#d3d8de",
+                    "#e3eaef",
+                    "#f4f6f8"
+                ]
+            },
+            "primary": {
+                "canonical": "#6777EF",
+                "displayName": "Azul Fiscal",
+                "role": "primary",
+                "tonalRamp": [
+                    "#1a1e4a",
+                    "#2c3280",
+                    "#4149b8",
+                    "#6777EF",
+                    "#828ef3",
+                    "#a3adf7",
+                    "#c3c9fa",
+                    "#e5e8fd"
+                ]
+            },
+            "primary-deep": {
+                "canonical": "#357ca5",
+                "displayName": "Azul Petroleo",
+                "role": "primary",
+                "tonalRamp": [
+                    "#0e2431",
+                    "#183e54",
+                    "#255d7e",
+                    "#357ca5",
+                    "#5a9abf",
+                    "#83b7d3",
+                    "#adcfe4",
+                    "#d9e9f2"
+                ]
+            },
+            "success": {
+                "canonical": "#66bb6a",
+                "displayName": "Sucesso",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#12341a",
+                    "#1f5a2d",
+                    "#2f8442",
+                    "#66bb6a",
+                    "#86cb8a",
+                    "#a8dbab",
+                    "#c9eacc",
+                    "#e8f5e9"
+                ]
+            },
+            "table-odd": {
+                "canonical": "#DCE6F1",
+                "displayName": "Linha Fiscal",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#232a33",
+                    "#3d4a5a",
+                    "#5a6d85",
+                    "#8ba0b8",
+                    "#a9bed2",
+                    "#c3d2e2",
+                    "#DCE6F1",
+                    "#eef3f8"
+                ]
+            },
+            "text": {
+                "canonical": "#757575",
+                "displayName": "Texto Operacional",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#1c1c1c",
+                    "#333333",
+                    "#4d4d4d",
+                    "#757575",
+                    "#909090",
+                    "#adadad",
+                    "#c9c9c9",
+                    "#ededed"
+                ]
+            },
+            "warning": {
+                "canonical": "#ffa426",
+                "displayName": "Alerta",
+                "role": "neutral",
+                "tonalRamp": [
+                    "#4a2a00",
+                    "#7d4700",
+                    "#b86900",
+                    "#ffa426",
+                    "#ffb454",
+                    "#ffc684",
+                    "#ffd9ae",
+                    "#ffedd6"
+                ]
+            }
+        },
+        "motion": [
+            {
+                "name": "ease-standard",
+                "purpose": "Transicao de estado de botoes e foco.",
+                "value": "ease 0.15s"
+            }
+        ],
+        "shadows": [],
+        "typographyMeta": {
+            "body": {
+                "displayName": "Body",
+                "purpose": "Tabelas densas e formularios."
+            },
+            "display": {
+                "displayName": "Display",
+                "purpose": "Totais do PDV e titulos de modulo."
+            },
+            "headline": {
+                "displayName": "Headline",
+                "purpose": "Cabecalhos de card."
+            },
+            "label": {
+                "displayName": "Label",
+                "purpose": "Filtros e badges."
+            },
+            "title": {
+                "displayName": "Title",
+                "purpose": "Titulos de secao."
+            }
+        }
+    },
+    "generatedAt": "2026-09-22T11:15:00Z",
+    "narrative": {
+        "dos": [
+            "Do usar primario (#6777EF) so na acao principal por bloco.",
+            "Do manter tabelas densas 12-14px com zebra quando PDF.",
+            "Do preservar termos SEFAZ verbatim com estilo neutro."
+        ],
+        "donts": [
+            "Don't introduzir pills, gradientes, glass ou raio >8px.",
+            "Don't recolorir status fiscal.",
+            "Don't trocar Nunito sem aprovacao."
+        ],
+        "keyCharacteristics": [
+            "Denso e funcional, nao minimalista",
+            "Plano por padrao, borda e tom separam",
+            "Acao primaria sempre indigo, resto neutro",
+            "Nunito em tudo, pesos definem hierarquia"
+        ],
+        "northStar": "Balcao Confiavel",
+        "overview": "Sistema denso e funcional herdado de UltimatePOS + AdminLTE, adaptado ao fiscal brasileiro. Densidade alta para caber itens, impostos e XMLs por tela, com leitura rapida no caixa.",
+        "rules": [
+            {
+                "body": "Primario em <=1 acao dominante por bloco; tabelas e texto permanecem neutros.",
+                "name": "The Acento Raro Rule",
+                "section": "colors"
+            },
+            {
+                "body": "Diferencie com 700/800 antes de aumentar px; densidade manda.",
+                "name": "The Peso Antes de Tamanho Rule",
+                "section": "typography"
+            },
+            {
+                "body": "Superficies planas no repouso. Sombra so em hover, foco ou modal.",
+                "name": "The Flat-By-Default Rule",
+                "section": "elevation"
+            }
+        ]
+    },
+    "schemaVersion": 2,
+    "title": "Design System: GACONT Sistema"
+}

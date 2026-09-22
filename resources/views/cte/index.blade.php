@@ -32,6 +32,7 @@
         <table class="table table-bordered table-striped" id="users_table">
             <thead>
                 <tr>
+                    <th>Número</th>
                     <th>Remetente</th>
                     <th>Destinatário</th>
                     <th>Valor de transporte</th>
@@ -65,11 +66,12 @@
             serverSide: true,
             ajax: '/cte',
             columnDefs: [ {
-                "targets": [4],
+                "targets": [10],
                 "orderable": false,
                 "searchable": false
             } ],
             "columns":[
+            {"data":"numero_cte"},
             {"data":"remetente"},
             {"data":"destinatario"},
             {"data":"valor_transporte"},
