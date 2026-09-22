@@ -1149,6 +1149,50 @@ class CteController extends Controller
 		->with(compact('cte', 'business'));
 	}
 
+	public function buscarOriginal(Request $request){
+		$business_id = request()->session()->get('user.business_id');
+		$q = trim((string) $request->get('q', ''));
+		$exclude = (int) $request->get('exclude_id', 0);
+		$digitos = preg_replace('/\D/', '', $q);
+
+		$ctes = Cte::where('business_id', $business_id)
+		->where('cte_numero', '>', 0)
+		->where('estado', 'aprovado')
+		->whereNotNull('chave')
+		->where('chave', '!=', '');
+
+		if($exclude > 0){
+			$ctes->where('id', '!=', $exclude);
+		}
+
+		if($digitos !== ''){
+			$ctes->where(function($w) use ($digitos){
+				$w->where('chave', 'like', '%' . $digitos . '%');
+				if(ctype_digit($digitos) && strlen($digitos) <= 9){
+					$w->orWhere('cte_numero', (int) $digitos);
+				}
+			});
+		}
+
+		$ctes = $ctes->with('destinatario')
+		->orderBy('id', 'desc')
+		->limit(20)
+		->get();
+
+		$lista = [];
+		foreach($ctes as $c){
+			$lista[] = [
+				'id' => $c->id,
+				'numero' => $c->cte_numero,
+				'chave' => $c->chave,
+				'destinatario' => $c->destinatario ? $c->destinatario->name : '',
+				'data' => $c->created_at ? $c->created_at->format('d/m/Y') : '',
+			];
+		}
+
+		return response()->json($lista);
+	}
+
 	public function baixarXml($id){
 		if (!auth()->user()->can('user.create')) {
 			abort(403, 'Unauthorized action.');

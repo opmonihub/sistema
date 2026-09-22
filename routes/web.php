@@ -150,6 +150,7 @@ Route::middleware(['authh', 'auth', 'SetSessionData', 'language', 'timezone', 'A
     Route::get('/cteXmls', 'CteController@xmls')->name('cte.xmls');
     Route::post('/importXml', 'CteController@importarXml')->name('cte.import-xml');
     Route::get('/cteFiltroXml', 'CteController@filtroXml')->name('cte.filtroXml');
+    Route::get('/cteBuscarOriginal', 'CteController@buscarOriginal')->name('cte.buscarOriginal');
     Route::get('/cteBaixarZipXmlAprovado/{location_id}', 'CteController@baixarZipXmlAprovado')->name('cte.baixarZipXmlAprovado');
     Route::get('/cteBaixarZipXmlReprovado/{location_id}', 'CteController@baixarZipXmlReprovado')->name('cte.baixarZipXmlReprovado');
 

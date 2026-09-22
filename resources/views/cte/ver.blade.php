@@ -27,7 +27,52 @@
         <h4>Data precisa de entrega: <strong>{{ \Carbon\Carbon::parse($cte->data_previsata_entrega)->format('d/m/Y')}}</strong></h4>
         <h4>Estado: <strong>{{$cte->estado}}</strong></h4>
         <h4>Chave: <strong>{{$cte->chave}}</strong></h4>
+        <h4>Finalidade: <strong>{{ (int)($cte->tp_cte ?? 0) == 3 ? 'Substituto' : ((int)($cte->tp_cte ?? 0) == 1 ? 'Complemento' : 'Normal') }}</strong></h4>
       </div>
+
+      @php
+      $tpCteVinculo = (int)($cte->tp_cte ?? 0);
+      $chaveVinculo = $tpCteVinculo == 3 ? $cte->chave_original : ($tpCteVinculo == 1 ? $cte->chave_complementada : null);
+      @endphp
+
+      @if($tpCteVinculo == 3 && $chaveVinculo)
+      <div class="col-md-12">
+        <div class="alert alert-warning">
+          <strong>CT-e Substituto.</strong> Substitui a chave <code style="word-break: break-all;">{{ $chaveVinculo }}</code>.
+          @if($cte->original)
+          <a href="{{ route('cte.ver', [$cte->original->id]) }}">Ver CT-e original nº {{ $cte->original->cte_numero }}</a>
+          @else
+          <span class="text-muted">Original fora da base.</span>
+          @endif
+          @if($cte->ind_altera_toma)
+          <span class="label label-warning">troca de tomador</span>
+          @endif
+        </div>
+      </div>
+      @endif
+
+      @if($tpCteVinculo == 1 && $chaveVinculo)
+      <div class="col-md-12">
+        <div class="alert alert-info">
+          <strong>CT-e Complemento.</strong> Complementa a chave <code style="word-break: break-all;">{{ $chaveVinculo }}</code>.
+          @if($cte->original)
+          <a href="{{ route('cte.ver', [$cte->original->id]) }}">Ver CT-e complementado nº {{ $cte->original->cte_numero }}</a>
+          @else
+          <span class="text-muted">Complementado fora da base.</span>
+          @endif
+        </div>
+      </div>
+      @endif
+
+      @if($cte->substitutos && count($cte->substitutos) > 0)
+      <div class="col-md-12">
+        <div class="alert alert-success">
+          @foreach($cte->substitutos as $sub)
+          <p><strong>Substituído pelo <a href="{{ route('cte.ver', [$sub->id]) }}">CT-e nº {{ $sub->cte_numero }}</a>.</strong></p>
+          @endforeach
+        </div>
+      </div>
+      @endif
 
       <input type="hidden" id="cte_numero" value="{{$cte->cte_numero}}" name="">
       @php

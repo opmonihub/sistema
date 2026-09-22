@@ -78,6 +78,48 @@
         </div>
       </div>
 
+      <div class="row">
+        <div class="col-md-12">
+          <div class="box box-primary" id="bloco-finalidade">
+            <div class="box-header with-border">
+              <h4 class="box-title text-primary">FINALIDADE DO CT-E</h4>
+              <p class="text-muted">Normal emite um CT-e novo. Substituto corrige um CT-e autorizado. Complemento complementa valores de um CT-e autorizado.</p>
+            </div>
+            <div class="box-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    {!! Form::label('tp_cte', 'Tipo do CT-e:') !!}
+                    {!! Form::select('tp_cte', ['0' => 'Normal', '3' => 'Substituto', '1' => 'Complemento'], '0', ['class' => 'form-control select2', 'id' => 'tp_cte']); !!}
+                  </div>
+                </div>
+                <div class="col-md-8" id="bloco-vinculo" style="display: none;">
+                  <div class="form-group">
+                    {!! Form::label('busca_original', 'Buscar CT-e original na lista:') !!}
+                    {!! Form::text('busca_original', null, ['class' => 'form-control', 'placeholder' => 'Digite o número ou a chave do CT-e autorizado', 'id' => 'busca_original', 'autocomplete' => 'off']); !!}
+                  </div>
+                  <div class="form-group">
+                    {!! Form::label('cte_original_id', 'CT-e original:') !!}
+                    {!! Form::select('cte_original_id', [], null, ['class' => 'form-control select2', 'id' => 'cte_original_id', 'placeholder' => 'Selecione o CT-e original']); !!}
+                  </div>
+                  <div class="form-group" id="grupo-chave-origem">
+                    {!! Form::label('chave_origem_manual', 'Chave do CT-e original (44 dígitos):', ['id' => 'label-chave-origem']) !!}
+                    {!! Form::text('chave_original', null, ['class' => 'form-control', 'placeholder' => 'Chave de acesso com 44 dígitos', 'id' => 'chave_origem_manual', 'maxlength' => '44', 'data-mask' => '00000000000000000000000000000000000000000000', 'aria-describedby' => 'ajuda-chave-origem']); !!}
+                    <p class="help-block" id="ajuda-chave-origem">44 dígitos numéricos, mesmo CNPJ emitente, CT-e autorizado. <span id="contador-chave">0/44 dígitos</span></p>
+                  </div>
+                  <div class="checkbox" id="bloco-altera-toma" style="display: none;">
+                    <label for="ind_altera_toma">
+                      {!! Form::checkbox('ind_altera_toma', '1', false, ['id' => 'ind_altera_toma']) !!}
+                      Mudou quem paga o frete? (alteração de tomador)
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       @if(is_null($default_location))
 
       <div class="col-md-4">
@@ -177,7 +219,7 @@
 
       <div class="clearfix"></div>
 
-      <div class="row">
+      <div class="row" id="bloco-documentos-fiscais">
         <div class="col-md-12">
           <div class="nav-tabs-custom">
             <ul class="nav nav-tabs nav-justified">
@@ -277,6 +319,7 @@
       </div>
 
       <div class="clearfix"></div>
+      <div id="bloco-carga">
       <div class="col-md-12">
         <h4>INFORMAÇÕES DA CARGA</h4>
       </div>
@@ -505,6 +548,7 @@
           </table>
         </div>
       </div>
+      </div>
 
       <div class="col-md-12">
         <h4>INFORMAÇÕES DA ENTREGA</h4>
@@ -666,6 +710,111 @@
     var REMETENTE = null;
     var DESTINATARIO = null;
     var CHAVES = [];
+    var BUSCA_URL = "{{ route('cte.buscarOriginal') }}";
+    var BUSCA_TIMER = null;
+    var EXCLUIR_ID = 0;
+
+    function tipoCteAtual(){
+      return $('#tp_cte').length ? $('#tp_cte').val() : '0';
+    }
+
+    function chaveOrigemValida(){
+      return (($('#chave_origem_manual').val() || '').replace(/\D/g, '').length == 44);
+    }
+
+    function aplicarFinalidade(){
+      var tp = tipoCteAtual();
+      var vinculo = (tp == '1' || tp == '3');
+      if(vinculo){
+        $('#bloco-vinculo').css('display', 'block');
+      }else{
+        $('#bloco-vinculo').css('display', 'none');
+      }
+      if(tp == '3'){
+        $('#bloco-altera-toma').css('display', 'block');
+      }else{
+        $('#bloco-altera-toma').css('display', 'none');
+        $('#ind_altera_toma').prop('checked', false);
+      }
+      if(tp == '1'){
+        $('#chave_origem_manual').attr('name', 'chave_complementada');
+        $('#label-chave-origem').text('Chave do CT-e complementado (44 dígitos):');
+      }else{
+        $('#chave_origem_manual').attr('name', 'chave_original');
+        $('#label-chave-origem').text('Chave do CT-e original (44 dígitos):');
+      }
+      if(tp == '1'){
+        $('#bloco-documentos-fiscais').css('display', 'none');
+        $('#bloco-carga').css('display', 'none');
+        $('#div-doc-anterior').css('display', 'none');
+        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"]').prop('required', false);
+      }else{
+        $('#bloco-documentos-fiscais').css('display', 'block');
+        $('#bloco-carga').css('display', 'block');
+        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"]').prop('required', true);
+        $('#tipo_servico').trigger('change');
+      }
+      habilitaBtnSalarCTe();
+    }
+
+    function atualizarContadorChave(){
+      var v = ($('#chave_origem_manual').val() || '').replace(/\D/g, '');
+      $('#contador-chave').text(v.length + '/44 dígitos');
+      $('#grupo-chave-origem').toggleClass('has-error', v.length > 0 && v.length != 44);
+      $('#grupo-chave-origem').toggleClass('has-success', v.length == 44);
+    }
+
+    function buscarOriginal(termo){
+      $.ajax({
+        type: 'GET',
+        url: BUSCA_URL,
+        data: { q: termo, exclude_id: EXCLUIR_ID },
+        dataType: 'json',
+        success: function(lista){
+          var html = '';
+          if(!lista || lista.length == 0){
+            html = '<option value="">Nenhum CT-e autorizado encontrado</option>';
+          }else{
+            html = '<option value="">Selecione o CT-e original</option>';
+            lista.forEach(function(c){
+              html += '<option value="' + c.id + '" data-chave="' + c.chave + '">Nº ' + c.numero + ' - ' + c.destinatario + ' - ' + c.data + '</option>';
+            });
+          }
+          $('#cte_original_id').html(html).trigger('change');
+        },
+        error: function(){
+          $('#cte_original_id').html('<option value="">Erro ao buscar. Tente novamente.</option>').trigger('change');
+        }
+      });
+    }
+
+    $('#tp_cte').change(() => {
+      aplicarFinalidade();
+    });
+
+    $('#busca_original').on('keyup', function(){
+      clearTimeout(BUSCA_TIMER);
+      var termo = $(this).val();
+      BUSCA_TIMER = setTimeout(function(){ buscarOriginal(termo); }, 400);
+    });
+
+    $('#cte_original_id').on('change', function(){
+      var chave = $(this).find('option:selected').attr('data-chave');
+      if(chave){
+        $('#chave_origem_manual').val(chave).trigger('input');
+        atualizarContadorChave();
+        habilitaBtnSalarCTe();
+      }
+    });
+
+    $('#chave_origem_manual').on('keyup change', function(){
+      var sel = $('#cte_original_id').find('option:selected');
+      if(sel.length && sel.val() && sel.attr('data-chave') && ($(this).val() || '') != sel.attr('data-chave')){
+        $('#cte_original_id').val('').trigger('change');
+      }
+      atualizarContadorChave();
+      habilitaBtnSalarCTe();
+    });
     $('#remetente_id').change(() => {
       let id =  $('#remetente_id').val()
       CLIENTES.map((c) => {
@@ -1037,10 +1186,24 @@
     // COMPONENTES CTE  FIM >>>>>>>
 
     function habilitaBtnSalarCTe(){
+      $('#finalizar').addClass('disabled');
       let tipoDocumento = false;
       let inputs = false;
 
       console.log(CHAVES.length)
+
+      var tpAtual = tipoCteAtual();
+
+      if(tpAtual == '1'){
+        if(chaveOrigemValida() && DESTINATARIO != null && REMETENTE != null){
+          $('#finalizar').removeClass('disabled')
+        }
+        return;
+      }
+
+      if(tpAtual == '3' && !chaveOrigemValida()){
+        return;
+      }
 
       if(CHAVES.length == 0 && $('#descOutros').val() != "" && $('#nDoc').val() != "" && $('#vDocFisc').val() != ""){
         tipoDocumento = true;
@@ -1148,6 +1311,10 @@
       $('#expedidor_id').val('').change()
 
       CLIENTES = JSON.parse($('#clientesAux').val())
+
+      $('#bloco-documentos-fiscais [required], #bloco-carga [required]').attr('data-req', '1');
+      aplicarFinalidade();
+      buscarOriginal('');
 
       $('#selected_contacts').on('ifChecked', function(event){
         $('div.selected_contacts_div').removeClass('hide');
