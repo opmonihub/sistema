@@ -116,7 +116,7 @@
                   </div>
                   <div class="form-group" id="grupo-chave-origem">
                     {!! Form::label('chave_origem_manual', ((int)($cte->tp_cte ?? 0) == 1 ? 'Chave do CT-e complementado (44 dígitos):' : 'Chave do CT-e original (44 dígitos):'), ['id' => 'label-chave-origem']) !!}
-                    {!! Form::text((int)($cte->tp_cte ?? 0) == 1 ? 'chave_complementada' : 'chave_original', $cte->chave_original ?? $cte->chave_complementada, ['class' => 'form-control', 'placeholder' => 'Chave de acesso com 44 dígitos', 'id' => 'chave_origem_manual', 'maxlength' => '44', 'data-mask' => '00000000000000000000000000000000000000000000', 'aria-describedby' => 'ajuda-chave-origem']); !!}
+                    {!! Form::text((int)($cte->tp_cte ?? 0) == 1 ? 'chave_complementada' : 'chave_original', (int)($cte->tp_cte ?? 0) == 1 ? ($cte->chave_complementada ?? $cte->chave_original) : ($cte->chave_original ?? $cte->chave_complementada), ['class' => 'form-control', 'placeholder' => 'Chave de acesso com 44 dígitos', 'id' => 'chave_origem_manual', 'maxlength' => '44', 'data-mask' => '00000000000000000000000000000000000000000000', 'aria-describedby' => 'ajuda-chave-origem']); !!}
                     <p class="help-block" id="ajuda-chave-origem">44 dígitos numéricos, mesmo CNPJ emitente, CT-e autorizado. <span id="contador-chave">0/44 dígitos</span></p>
                   </div>
                   <div class="checkbox" id="bloco-altera-toma" style="display: {{ (int)($cte->tp_cte ?? 0) == 3 ? 'block' : 'none' }};">
@@ -715,8 +715,11 @@
       var vinculo = (tp == '1' || tp == '3');
       if(vinculo){
         $('#bloco-vinculo').css('display', 'block');
+        $('#chave_origem_manual').prop('disabled', false);
       }else{
         $('#bloco-vinculo').css('display', 'none');
+        $('#chave_origem_manual').val('').prop('disabled', true);
+        atualizarContadorChave();
       }
       if(tp == '3'){
         $('#bloco-altera-toma').css('display', 'block');
@@ -735,11 +738,11 @@
         $('#bloco-documentos-fiscais').css('display', 'none');
         $('#bloco-carga').css('display', 'none');
         $('#div-doc-anterior').css('display', 'none');
-        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"]').prop('required', false);
+        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"], #div-doc-anterior [data-req="1"]').prop('required', false);
       }else{
         $('#bloco-documentos-fiscais').css('display', 'block');
         $('#bloco-carga').css('display', 'block');
-        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"]').prop('required', true);
+        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"], #div-doc-anterior [data-req="1"]').prop('required', true);
         $('#tipo_servico').trigger('change');
       }
       habilitaBtnSalarCTe();
@@ -750,6 +753,10 @@
       $('#contador-chave').text(v.length + '/44 dígitos');
       $('#grupo-chave-origem').toggleClass('has-error', v.length > 0 && v.length != 44);
       $('#grupo-chave-origem').toggleClass('has-success', v.length == 44);
+    }
+
+    function escHtml(s){
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     function buscarOriginal(termo){
@@ -767,7 +774,7 @@
             html = '<option value="">Selecione o CT-e original</option>';
             lista.forEach(function(c){
               var sel = (String(c.id) == String(atual)) ? ' selected' : '';
-              html += '<option value="' + c.id + '" data-chave="' + c.chave + '"' + sel + '>Nº ' + c.numero + ' - ' + c.destinatario + ' - ' + c.data + '</option>';
+              html += '<option value="' + c.id + '" data-chave="' + c.chave + '"' + sel + '>Nº ' + c.numero + ' - ' + escHtml(c.destinatario) + ' - ' + escHtml(c.data) + '</option>';
             });
           }
           $('#cte_original_id').html(html).trigger('change');
@@ -1338,7 +1345,7 @@
     $(document).ready(function(){
 
       CLIENTES = JSON.parse($('#clientesAux').val())
-      $('#bloco-documentos-fiscais [required], #bloco-carga [required]').attr('data-req', '1');
+      $('#bloco-documentos-fiscais [required], #bloco-carga [required], #div-doc-anterior [required]').attr('data-req', '1');
       atualizarContadorChave();
       aplicarFinalidade();
       if(tipoCteAtual() == '1' || tipoCteAtual() == '3'){

@@ -727,8 +727,11 @@
       var vinculo = (tp == '1' || tp == '3');
       if(vinculo){
         $('#bloco-vinculo').css('display', 'block');
+        $('#chave_origem_manual').prop('disabled', false);
       }else{
         $('#bloco-vinculo').css('display', 'none');
+        $('#chave_origem_manual').val('').prop('disabled', true);
+        atualizarContadorChave();
       }
       if(tp == '3'){
         $('#bloco-altera-toma').css('display', 'block');
@@ -747,11 +750,11 @@
         $('#bloco-documentos-fiscais').css('display', 'none');
         $('#bloco-carga').css('display', 'none');
         $('#div-doc-anterior').css('display', 'none');
-        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"]').prop('required', false);
+        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"], #div-doc-anterior [data-req="1"]').prop('required', false);
       }else{
         $('#bloco-documentos-fiscais').css('display', 'block');
         $('#bloco-carga').css('display', 'block');
-        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"]').prop('required', true);
+        $('#bloco-documentos-fiscais [data-req="1"], #bloco-carga [data-req="1"], #div-doc-anterior [data-req="1"]').prop('required', true);
         $('#tipo_servico').trigger('change');
       }
       habilitaBtnSalarCTe();
@@ -762,6 +765,10 @@
       $('#contador-chave').text(v.length + '/44 dígitos');
       $('#grupo-chave-origem').toggleClass('has-error', v.length > 0 && v.length != 44);
       $('#grupo-chave-origem').toggleClass('has-success', v.length == 44);
+    }
+
+    function escHtml(s){
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     function buscarOriginal(termo){
@@ -777,7 +784,7 @@
           }else{
             html = '<option value="">Selecione o CT-e original</option>';
             lista.forEach(function(c){
-              html += '<option value="' + c.id + '" data-chave="' + c.chave + '">Nº ' + c.numero + ' - ' + c.destinatario + ' - ' + c.data + '</option>';
+              html += '<option value="' + c.id + '" data-chave="' + c.chave + '">Nº ' + c.numero + ' - ' + escHtml(c.destinatario) + ' - ' + escHtml(c.data) + '</option>';
             });
           }
           $('#cte_original_id').html(html).trigger('change');
@@ -1312,7 +1319,7 @@
 
       CLIENTES = JSON.parse($('#clientesAux').val())
 
-      $('#bloco-documentos-fiscais [required], #bloco-carga [required]').attr('data-req', '1');
+      $('#bloco-documentos-fiscais [required], #bloco-carga [required], #div-doc-anterior [required]').attr('data-req', '1');
       aplicarFinalidade();
       buscarOriginal('');
 
