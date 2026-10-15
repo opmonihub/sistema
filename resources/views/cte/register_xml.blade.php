@@ -292,6 +292,24 @@
 
       <div class="clearfix"></div>
 
+      <div class="col-md-6" id="div-tomador-outros" style="display: none;">
+        <div class="form-group">
+          {!! Form::label('tomador_outros_id', 'Tomador (Outros)' . ':') !!}
+          {!! Form::select('tomador_outros_id', $clientes, '', ['class' => 'form-control select2', 'id' => 'tomador_outros_id', 'placeholder' => 'Selecione o tomador']); !!}
+        </div>
+        <div class="box box-warning" id="box-tomador-outros" style="display: none">
+          <div class="box-body">
+            <h5>Nome: <strong id="tomador-outros-nome"></strong></h5>
+            <h5>CNPJ: <strong id="tomador-outros-cnpj"></strong></h5>
+            <h5>IE: <strong id="tomador-outros-ie"></strong></h5>
+            <h5>Endereço: <strong id="tomador-outros-endereco"></strong></h5>
+            <h5>Cidade: <strong id="tomador-outros-cidade"></strong></h5>
+          </div>
+        </div>
+      </div>
+
+      <div class="clearfix"></div>
+
       <!-- Documentos de Transporte Anterior (para Subcontratação/Redespacho) -->
       <div class="col-md-12" id="div-doc-anterior" style="display: none;">
         <div class="box box-info">
@@ -746,6 +764,32 @@
       }
     }
 
+    // Tomador Outros
+    function atualizarTomadorOutros(preencherEndereco) {
+      const outros = $('#tomador').val() === '4';
+      const contato = CLIENTES.find(c => String(c.id) === $('#tomador_outros_id').val());
+      $('#div-tomador-outros').toggle(outros);
+      $('#box-tomador-outros').toggle(outros && !!contato);
+      if(!outros || !contato) return;
+
+      $('#tomador-outros-nome').text(contato.name || '');
+      $('#tomador-outros-cnpj').text(contato.cpf_cnpj || '');
+      $('#tomador-outros-ie').text(contato.ie_rg || '');
+      $('#tomador-outros-endereco').text((contato.rua || '') + ', ' + (contato.numero || ''));
+      $('#tomador-outros-cidade').text(contato.cidade ? contato.cidade.nome + ' (' + contato.cidade.uf + ')' : '');
+
+      if(preencherEndereco){
+        $('#rua_tomador').val(contato.rua || '');
+        $('#numero_tomador').val(contato.numero || '');
+        $('#bairro_tomador').val(contato.bairro || '');
+        $('#cep_tomador').val(contato.cep || '');
+        $('#cidade_tomador').val(contato.cidade ? contato.cidade.id : '').trigger('change');
+      }
+    }
+
+    $('#tomador').on('change', () => atualizarTomadorOutros(false));
+    $('#tomador_outros_id').on('change', () => atualizarTomadorOutros(true));
+
     // Tipo de Serviço - documentos anteriores para Subcontratação/Redespacho.
     var DOCS_ANTERIORES = [];
 
@@ -1110,6 +1154,7 @@
     $(document).ready(function(){
 
       CLIENTES = JSON.parse($('#clientesAux').val())
+      atualizarTomadorOutros(false);
 
       recuperarListasCte();
       selectRemetente();

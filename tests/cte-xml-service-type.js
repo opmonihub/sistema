@@ -192,6 +192,7 @@ for (const view of ['register_xml', 'create', 'edit']) {
         initBuscaOriginal() {}, atualizarContadorChave() {}, aplicarFinalidade() {},
         changeRemetente() {}, changeDestinatario() {}, selecetRecebedor() {}, selectExpedidor() {},
         selectRemetente() {}, selectDestinatario() {}, habilitaBtnSalarCTe() {},
+        atualizarTomadorOutros(fillAddress) { assert.strictEqual(fillAddress, false, 'Inicialização não deve sobrescrever o endereço informado'); },
         montaHtmlChaveNfe(callback) { callback(''); }, adicionarChaveArray(key) { this.CHAVES.push(key); },
     });
     vm.runInContext(code.slice(from, until), init);
@@ -229,3 +230,62 @@ for (const view of ['register_xml', 'create', 'edit']) {
     } finally {dom.window.close();}
 }
 console.log('PASS exclusões consecutivas mantêm handlers e hidden sincronizados nas três views');
+
+const payerStart = source.indexOf('    // Tomador Outros');
+const payerEnd = source.indexOf('    // Tipo de Serviço', payerStart);
+assert(payerStart >= 0 && payerEnd > payerStart, 'A importação XML deve implementar a seleção de Tomador (Outros).');
+const payerDom = new JSDOM(`
+    <select id="tomador">${[0, 1, 2, 3, 4].map(id => `<option value="${id}">${id}</option>`).join('')}</select>
+    <select id="tomador_outros_id"><option value=""></option><option value="8">Contato</option><option value="9">Sem cidade</option></select>
+    <div id="div-tomador-outros" style="display:none"><div id="box-tomador-outros" style="display:none">
+        ${['nome', 'cnpj', 'ie', 'endereco', 'cidade'].map(field => `<strong id="tomador-outros-${field}"></strong>`).join('')}
+    </div></div>
+    ${['rua_tomador', 'numero_tomador', 'bairro_tomador', 'cep_tomador', 'cidade_tomador'].map(id => `<input id="${id}">`).join('')}
+`, {runScripts: 'outside-only'});
+try {
+    const w = payerDom.window;
+    w.eval(fs.readFileSync(path.join(__dirname, '../resources/plugins/jquery-validation-1.16.0/lib/jquery-3.1.1.js'), 'utf8'));
+    const $payer = w.jQuery;
+    w.CLIENTES = [
+        {id: 8, name: '<img src=x onerror=alert(1)>', cpf_cnpj: '12.345.678/0001-95', ie_rg: '12345', rua: 'Rua de teste', numero: '40', bairro: 'Centro', cep: '65000-000', cidade: {id: 10, nome: 'São Luís', uf: 'MA'}},
+        {id: 9, name: 'Sem cidade', cpf_cnpj: '98.765.432/0001-10', ie_rg: 'ISENTO', rua: 'Outra rua', numero: '50', bairro: 'Bairro', cep: '00000-000', cidade: null},
+    ];
+    $payer('#tomador').val('4');
+    $payer('#tomador_outros_id').val('8');
+    $payer('#rua_tomador').val('Endereço já informado');
+    w.eval(source.slice(payerStart, payerEnd));
+    // Executa o ready real com o mesmo DOM, sem os demais componentes do formulário.
+    const readyStart = source.indexOf('    $(document).ready(function(){') + '    $(document).ready(function(){'.length;
+    const readyEnd = source.indexOf("      $('#selected_contacts')", readyStart);
+    $payer('<input id="clientesAux">').val(JSON.stringify(w.CLIENTES)).appendTo(w.document.body);
+    for (const fn of ['recuperarListasCte', 'selectRemetente', 'selectDestinatario', 'habilitaBtnSalarCTe', 'montaHtmlChaveNfe']) w[fn] = () => {};
+    w.eval(source.slice(readyStart, readyEnd));
+    assert.notStrictEqual($payer('#div-tomador-outros').css('display'), 'none', 'Old Tomador=Outros deve mostrar o seletor na inicialização');
+    assert.notStrictEqual($payer('#box-tomador-outros').css('display'), 'none');
+    assert.strictEqual($payer('#rua_tomador').val(), 'Endereço já informado');
+    assert.strictEqual($payer('#tomador-outros-nome').text(), w.CLIENTES[0].name);
+    assert.strictEqual($payer('#box-tomador-outros img').length, 0, 'Dados do contato devem ser texto, nunca HTML');
+    for (const value of ['0', '1', '2', '3']) {
+        $payer('#tomador').val(value).trigger('change');
+        assert.strictEqual($payer('#div-tomador-outros').css('display'), 'none');
+        assert.strictEqual($payer('#box-tomador-outros').css('display'), 'none');
+    }
+    $payer('#tomador').val('4').trigger('change');
+    assert.notStrictEqual($payer('#div-tomador-outros').css('display'), 'none');
+    assert.notStrictEqual($payer('#box-tomador-outros').css('display'), 'none');
+    assert.strictEqual($payer('#rua_tomador').val(), 'Endereço já informado');
+    $payer('#tomador_outros_id').trigger('change');
+    for (const [field, expected] of Object.entries({rua_tomador: 'Rua de teste', numero_tomador: '40', bairro_tomador: 'Centro', cep_tomador: '65000-000', cidade_tomador: '10'})) {
+        assert.strictEqual($payer('#'+field).val(), expected);
+    }
+    assert.strictEqual($payer('#tomador-outros-cnpj').text(), w.CLIENTES[0].cpf_cnpj);
+    assert.strictEqual($payer('#tomador-outros-ie').text(), '12345');
+    assert.strictEqual($payer('#tomador-outros-endereco').text(), 'Rua de teste, 40');
+    assert.strictEqual($payer('#tomador-outros-cidade').text(), 'São Luís (MA)');
+    $payer('#tomador_outros_id').val('9').trigger('change');
+    assert.strictEqual($payer('#tomador-outros-cidade').text(), '');
+    assert.strictEqual($payer('#cidade_tomador').val(), '');
+    $payer('#tomador_outros_id').val('').trigger('change');
+    assert.strictEqual($payer('#box-tomador-outros').css('display'), 'none', 'Limpar contato deve ocultar dados do contato anterior');
+} finally {payerDom.window.close();}
+console.log('PASS Tomador Outros na importação: seletor, dados seguros, endereço, cidade ausente e recuperação sem sobrescrita');

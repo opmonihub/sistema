@@ -29,6 +29,31 @@ class CteXmlServiceTypeTest extends TestCase
         $this->assertSame('0', $xpath->query('//select[@name="tipo_servico"]/option[@selected]')->item(0)->getAttribute('value'));
     }
 
+    public function test_import_form_offers_other_payer_contact_and_details()
+    {
+        $xpath = $this->renderCargoFields();
+
+        $this->assertCount(1, $xpath->query('//*[@id="div-tomador-outros" and contains(@style, "display: none")]'));
+        $this->assertCount(1, $xpath->query('//label[@for="tomador_outros_id"]'));
+        $this->assertCount(1, $xpath->query('//select[@name="tomador_outros_id" and @id="tomador_outros_id" and contains(@class, "select2")]'));
+        $this->assertCount(1, $xpath->query('//select[@name="tomador_outros_id"]/option[@value="8"]'));
+        $this->assertCount(1, $xpath->query('//*[@id="box-tomador-outros"]'));
+        foreach (['nome', 'cnpj', 'ie', 'endereco', 'cidade'] as $field) {
+            $this->assertCount(1, $xpath->query('//*[@id="tomador-outros-' . $field . '"]'));
+        }
+    }
+
+    public function test_import_form_restores_other_payer_selection_from_old_input()
+    {
+        $this->app['request']->setLaravelSession($this->app['session']->driver());
+        $this->app['session']->flashInput(['tomador' => '4', 'tomador_outros_id' => '8']);
+
+        $xpath = $this->renderCargoFields();
+
+        $this->assertCount(1, $xpath->query('//select[@name="tomador"]/option[@value="4" and @selected]'));
+        $this->assertCount(1, $xpath->query('//select[@name="tomador_outros_id"]/option[@value="8" and @selected]'));
+    }
+
     public function test_import_form_has_previous_transport_document_fields()
     {
         $xpath = $this->renderCargoFields();
@@ -113,7 +138,7 @@ class CteXmlServiceTypeTest extends TestCase
         $end = strpos($source, '<h5 class="text-primary">INFORMAÇÕES DE QUANTIDADE</h5>', $start);
         $template = substr($source, $start, $end - $start);
         $veiculos = [];
-        $clientes = [];
+        $clientes = [8 => 'Contato de teste'];
         $tiposTomador = Cte::tiposTomador();
         $tiposServico = Cte::tiposServico();
         $modals = Cte::modals();
