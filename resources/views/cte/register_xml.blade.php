@@ -16,6 +16,7 @@
 
 
   {!! Form::open(['url' => action('CteController@store'), 'method' => 'post', 'id' => 'cte_add_form' ]) !!}
+  <input type="hidden" name="_cte_xml_import" value="1">
   
   <div class="row">
     <div class="col-md-12">
@@ -182,7 +183,7 @@
                         <input placeholder="Chave NFe" class="form-control type-ref" data-mask="00000000000000000000000000000000000000000000" value="{{$dadosDaNFe['chave']}}" name="chave_nfe" type="text" id="chave_nfe">
                       </div>
                     </div>
-                    <input type="hidden" id="chaves_nfe" name="chaves_nfe" value="">
+                    <input type="hidden" id="chaves_nfe" name="chaves_nfe" value="{{ old('chaves_nfe', '') }}">
                     <div class="col-md-1"><br>
                       <a id="addChave" class="btn btn-success" style="margin-top: 4px;">
                         <i class="fa fa-plus"></i>
@@ -279,6 +280,65 @@
         <div class="form-group">
           {!! Form::label('tomador', 'Tomador' . ':*') !!}
           {!! Form::select('tomador', $tiposTomador, '', ['class' => 'form-control select2', 'id' => 'tomador', 'required']); !!}
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <div class="form-group">
+          {!! Form::label('tipo_servico', 'Tipo de Serviço' . ':*') !!}
+          {!! Form::select('tipo_servico', $tiposServico, '0', ['class' => 'form-control select2', 'id' => 'tipo_servico', 'required']); !!}
+        </div>
+      </div>
+
+      <div class="clearfix"></div>
+
+      <!-- Documentos de Transporte Anterior (para Subcontratação/Redespacho) -->
+      <div class="col-md-12" id="div-doc-anterior" style="display: none;">
+        <div class="box box-info">
+          <div class="box-header with-border">
+            <h4 class="box-title text-primary">DOCUMENTOS DE TRANSPORTE ANTERIOR</h4>
+            <p class="text-muted">Obrigatório para Subcontratação, Redespacho e Redespacho Intermediário</p>
+          </div>
+          <div class="box-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  {!! Form::label('chave_cte_anterior', 'Chave do CT-e Anterior (44 dígitos)' . ':') !!}
+                  {!! Form::text('chave_cte_anterior', null, ['class' => 'form-control', 'placeholder' => 'Chave do CT-e anterior', 'id' => 'chave_cte_anterior', 'data-mask="00000000000000000000000000000000000000000000"']); !!}
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-group">
+                  {!! Form::label('ie_emitente_anterior', 'IE do Emitente' . ':') !!}
+                  {!! Form::text('ie_emitente_anterior', null, ['class' => 'form-control', 'placeholder' => 'Inscrição Estadual', 'id' => 'ie_emitente_anterior']); !!}
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="form-group">
+                  <br>
+                  <a id="addDocAnterior" class="btn btn-success" style="margin-top: 3px;">
+                    <i class="fa fa-plus"></i> Adicionar
+                  </a>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" name="documentos_anteriores" id="docs_anteriores" value="{{ is_string(old('documentos_anteriores', '[]')) ? old('documentos_anteriores', '[]') : '[]' }}">
+            <div class="table-responsive">
+              <table class="table table-bordered table-striped" id="tbl-docs-anteriores">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Chave CT-e</th>
+                    <th>CNPJ Emitente</th>
+                    <th>IE Emitente</th>
+                    <th>UF</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -532,8 +592,8 @@
           {!! Form::text('obs', null, ['class' => 'form-control type-ref', 'placeholder' => 'Informação Adicional' ]); !!}
         </div>
       </div>
-      <input type="hidden" name="componentes" id="comps">
-      <input type="hidden" name="medidas" id="meds">
+      <input type="hidden" name="componentes" id="comps" value="{{ is_string(old('componentes', '[]')) ? old('componentes', '[]') : '[]' }}">
+      <input type="hidden" name="medidas" id="meds" value="{{ is_string(old('medidas', '[]')) ? old('medidas', '[]') : '[]' }}">
 
       @endcomponent
     </div>
@@ -559,6 +619,41 @@
     $('#file').change(function() {
       $('#form-import').submit();
     });
+
+    // Recuperar listas completas: nunca aproveitar só os primeiros itens de um payload inválido.
+    function lerListaCte(selector, normalizar) {
+      try {
+        const lista = JSON.parse($(selector).val() || '[]');
+        if(!Array.isArray(lista)) return [];
+        return lista.map((item, index) => {
+          if(!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Item inválido');
+          return Object.assign({id: index + 1}, normalizar(item));
+        });
+      } catch(error) { return []; }
+    }
+    function campoListaCte(item, campo, alternativo) {
+      const valor = item[campo] !== undefined ? item[campo] : item[alternativo];
+      if(typeof valor !== 'string' && typeof valor !== 'number') throw new Error('Campo inválido');
+      return String(valor);
+    }
+    function recuperarListasCte() {
+      MEDIDAS = lerListaCte('#meds', item => ({
+        unidade_medida: campoListaCte(item, 'unidade_medida', 'cod_unidade'),
+        tipo_medida: campoListaCte(item, 'tipo_medida'),
+        quantidade: campoListaCte(item, 'quantidade', 'quantidade_carga')
+      }));
+      COMPONENTES = lerListaCte('#comps', item => ({nome: campoListaCte(item, 'nome'), valor: campoListaCte(item, 'valor')}));
+      DOCS_ANTERIORES = lerListaCte('#docs_anteriores', item => ({
+        chave: campoListaCte(item, 'chave', 'chave_cte'),
+        ie: campoListaCte(item, 'ie', 'ie_emitente'),
+        cnpj: campoListaCte(item, 'cnpj', 'cnpj_emitente'),
+        uf: campoListaCte(item, 'uf', 'uf_emitente')
+      }));
+      $('#prod tbody').empty().append(montaTabela());
+      $('#componentes tbody').empty().append(montaTabelaComponentes(true));
+      montaTabelaDocsAnteriores();
+    }
+    // Fim da recuperação de listas
 
     var CLIENTES = []
     var MEDIDAS = []
@@ -651,6 +746,88 @@
       }
     }
 
+    // Tipo de Serviço - documentos anteriores para Subcontratação/Redespacho.
+    var DOCS_ANTERIORES = [];
+
+    function codigoUfParaSigla(codigo) {
+      const ufs = {
+        '11': 'RO', '12': 'AC', '13': 'AM', '14': 'RR', '15': 'PA', '16': 'AP', '17': 'TO',
+        '21': 'MA', '22': 'PI', '23': 'CE', '24': 'RN', '25': 'PB', '26': 'PE', '27': 'AL', '28': 'SE', '29': 'BA',
+        '31': 'MG', '32': 'ES', '33': 'RJ', '35': 'SP',
+        '41': 'PR', '42': 'SC', '43': 'RS',
+        '50': 'MS', '51': 'MT', '52': 'GO', '53': 'DF'
+      };
+      return ufs[codigo] || null;
+    }
+
+    function documentoAnteriorValido(chave, ie) {
+      if(typeof chave !== 'string' || !/^[0-9]{44}$/.test(chave) || chave.substring(20, 22) !== '57' || !codigoUfParaSigla(chave.substring(0, 2))){
+        return false;
+      }
+      let soma = 0, peso = 2;
+      for(let i = 42; i >= 0; i--){
+        soma += Number(chave[i]) * peso;
+        peso = peso === 9 ? 2 : peso + 1;
+      }
+      let dv = 11 - (soma % 11);
+      dv = dv >= 10 ? 0 : dv;
+      return Number(chave[43]) === dv && typeof ie === 'string' && /^(?:[0-9]{2,14}|ISENTO)$/.test(ie.trim());
+    }
+
+    $('#cte_add_form').on('submit', function(event) {
+      if((['1', '2', '3'].includes($('#tipo_servico').val()) && DOCS_ANTERIORES.length === 0) ||
+          DOCS_ANTERIORES.some(doc => !documentoAnteriorValido(doc.chave, doc.ie))){
+        event.preventDefault();
+        swal('Erro', 'Informe CT-e anterior modelo 57 com chave válida e IE de 2 a 14 dígitos ou ISENTO.', 'error');
+      }
+    });
+
+    $('#tipo_servico').on('change', function() {
+      $('#div-doc-anterior').toggle(['1', '2', '3'].includes($(this).val()));
+    }).trigger('change');
+
+    $('#addDocAnterior').click(() => {
+      let chave = $('#chave_cte_anterior').val();
+      let ie = $('#ie_emitente_anterior').val();
+      if(!documentoAnteriorValido(chave, ie)){
+        swal('Erro', 'Informe CT-e anterior modelo 57 com 44 dígitos, DV e UF válidos; IE de 2 a 14 dígitos ou ISENTO.', 'error');
+        return;
+      }
+
+      DOCS_ANTERIORES.push({
+        id: DOCS_ANTERIORES.length + 1,
+        chave: chave,
+        cnpj: chave.substring(6, 20),
+        uf: codigoUfParaSigla(chave.substring(0, 2)),
+        ie: ie.trim()
+      });
+      montaTabelaDocsAnteriores();
+      $('#chave_cte_anterior').val('');
+      $('#ie_emitente_anterior').val('');
+    });
+
+    function montaTabelaDocsAnteriores(){
+      let tbody = $('#tbl-docs-anteriores tbody').empty();
+      DOCS_ANTERIORES.forEach((doc) => {
+        let row = $('<tr>');
+        [doc.id, doc.chave, doc.cnpj, doc.ie, doc.uf].forEach((value) => {
+          row.append($('<td>').text(value));
+        });
+        let remover = $('<button type="button" class="btn btn-danger btn-sm" aria-label="Remover documento anterior">')
+          .append($('<i class="fa fa-trash">'))
+          .click(() => deleteDocAnterior(doc.id));
+        row.append($('<td>').append(remover));
+        tbody.append(row);
+      });
+      $('#docs_anteriores').val(JSON.stringify(DOCS_ANTERIORES));
+    }
+
+    function deleteDocAnterior(id){
+      DOCS_ANTERIORES = DOCS_ANTERIORES.filter(doc => doc.id != id);
+      DOCS_ANTERIORES.forEach((doc, index) => { doc.id = index + 1; });
+      montaTabelaDocsAnteriores();
+    }
+
     $('#addChave').click(() => {
       let chave = $('#chave_nfe').val();
       if(chave.length == 44){
@@ -714,25 +891,20 @@
       console.log(MEDIDAS)
 
       let t = montaTabela();
-      $('#prod tbody').html(t)
+      $('#prod tbody').empty().append(t)
     })
 
     function montaTabela(){
-      let t = ""; 
-      MEDIDAS.map((v) => {
-        t += "<tr>";
-        t += "<td>"+v.id+"</td>";
-        t += "<td>"+unidadeMedidaExibe(v.unidade_medida)+"</td>";
-        t += "<td>"+v.tipo_medida+"</td>";
-        t += "<td>"+v.quantidade+"</td>";
-        t += "<td><a href='#!' class='btn btn-danger btn-sm' onclick='deleteItem("+v.id+")'>"
-        t += "<i class='fa fa-trash'></i></a></td>";
-        t+= "</tr>";
+      const rows = MEDIDAS.map(v => {
+        const row = $('<tr>');
+        [v.id, unidadeMedidaExibe(v.unidade_medida), v.tipo_medida, v.quantidade].forEach(value => row.append($('<td>').text(value)));
+        const remover = $('<button type="button" class="btn btn-danger btn-sm" aria-label="Remover medida">')
+          .append($('<i class="fa fa-trash">')).click(() => deleteItem(v.id));
+        return row.append($('<td>').append(remover));
       });
-      $('#meds').val(JSON.stringify(MEDIDAS))
-
-      habilitaBtnSalarCTe()
-      return t;
+      $('#meds').val(JSON.stringify(MEDIDAS));
+      habilitaBtnSalarCTe();
+      return rows;
     }
 
     function deleteItem(id){
@@ -745,7 +917,7 @@
       MEDIDAS = temp;
       refatoreItens()
       let t = montaTabela(); 
-      $('#prod tbody').html(t)
+      $('#prod tbody').empty().append(t)
 
     }
 
@@ -784,31 +956,29 @@
       COMPONENTES.push({id: (COMPONENTES.length+1), valor: valor_componente,
         nome: nome_componente});
       let t = montaTabelaComponentes();
-      $('#componentes tbody').html(t)
+      $('#componentes tbody').empty().append(t)
       console.log(JSON.stringify(COMPONENTES))
       
       habilitaBtnSalarCTe();
     });
 
-    function montaTabelaComponentes(){
-      let t = ""; 
-      SOMACOMPONENTES = 0;
-      COMPONENTES.map((v) => {
-        t += "<tr>";
-        t += "<td>"+v.id+"</td>";
-        t += "<td>"+v.nome+"</td>";
-        t += "<td>"+v.valor+"</td>";
-        t += "<td><a href='#!' class='btn btn-danger btn-sm'  onclick='deleteComponente("+v.id+")'>"
-        t += "<i class='fa fa-trash'></i></a></td>";
-        t+= "</tr>";
-
-        SOMACOMPONENTES += parseFloat(v.valor.replace(',', '.'));
+    function montaTabelaComponentes(preservarValores){
+      let soma = 0;
+      const rows = COMPONENTES.map(v => {
+        const row = $('<tr>');
+        [v.id, v.nome, v.valor].forEach(value => row.append($('<td>').text(value)));
+        const remover = $('<button type="button" class="btn btn-danger btn-sm" aria-label="Remover componente">')
+          .append($('<i class="fa fa-trash">')).click(() => deleteComponente(v.id));
+        soma += parseFloat(String(v.valor).replace(',', '.')) || 0;
+        return row.append($('<td>').append(remover));
       });
-      $('#comps').val(JSON.stringify(COMPONENTES))
-      $('#valor_receber').val(SOMACOMPONENTES.toFixed(2));
-      $('#valor_transporte').val(SOMACOMPONENTES.toFixed(2));
-      habilitaBtnSalarCTe()
-      return t;
+      $('#comps').val(JSON.stringify(COMPONENTES));
+      if(!preservarValores){
+        $('#valor_receber').val(soma.toFixed(2));
+        $('#valor_transporte').val(soma.toFixed(2));
+      }
+      habilitaBtnSalarCTe();
+      return rows;
     }
 
     function deleteComponente(id){
@@ -821,7 +991,7 @@
       COMPONENTES = temp;
       refatoreComponentes()
       let t = montaTabelaComponentes(); 
-      $('#componentes tbody').html(t)
+      $('#componentes tbody').empty().append(t)
 
     }
 
@@ -941,15 +1111,17 @@
 
       CLIENTES = JSON.parse($('#clientesAux').val())
 
+      recuperarListasCte();
       selectRemetente();
       selectDestinatario();
 
-      let chave = $('#chave_nfe').val();
-      if(chave.length == 44){
-        adicionarChaveArray(chave)
-      }else{
+      CHAVES = ($('#chaves_nfe').val() || '').split(/[;,]/).filter(chave => /^[0-9]{44}$/.test(chave));
+      if(!CHAVES.length){
+        let chave = $('#chave_nfe').val();
+        if(/^[0-9]{44}$/.test(chave)) adicionarChaveArray(chave);
       }
-
+      montaHtmlChaveNfe(html => $('#chaves_list').html(html));
+      habilitaBtnSalarCTe();
 
       $('#selected_contacts').on('ifChecked', function(event){
         $('div.selected_contacts_div').removeClass('hide');

@@ -850,6 +850,7 @@
       </div>
 
       <input type="hidden" name="municipios_descarregamentos" id="municipios_descarregamentos"> 
+      <div id="mdfe_descargas_error" class="alert alert-danger" role="alert" hidden></div>
       <input type="hidden" name="descargas" id="descargas"> 
       <input type="hidden" name="ciots" id="ciots"> 
       <input type="hidden" name="vales" id="vales"> 
@@ -860,7 +861,9 @@
       <input type="hidden" value="{{$mdfe != null ? $mdfe->ciots : ''}}" id="init_ciot"> 
       <input type="hidden" value="{{$mdfe != null ? $mdfe->valesPedagio : ''}}" id="init_vale"> 
 
-      <input type="hidden" value="{{$mdfe != null ? $mdfe->infoDescarga : ''}}" id="init_descargas"> 
+      <input type="hidden" value="{{$mdfe != null ? $mdfe->infoDescarga : ''}}" id="init_descargas">
+      <input type="hidden" value="{{ old('descargas', '') }}" id="old_descargas">
+      <input type="hidden" value="{{ json_encode(session()->getOldInput() ? \Illuminate\Support\Arr::only(session()->getOldInput(), ['municipios_descarregamentos', 'percurso', 'ciots', 'vales']) : []) }}" id="old_listas">
 
       <input type="hidden" value="{{$mdfe != null ? $mdfe->id : ''}}" name="mdfe_id">
       <div class="col-md-12">
@@ -909,10 +912,16 @@
     var LACRESTRANSPORTE = [];
     var LACRESUNIDADECARGA = [];
     var DESCARGAS = [];
+    var DESCARGAS_CARREGADAS = false;
+    var DESCARGAS_ERRO = false;
+    var PROXIMA_DESCARGA = 1;
     
-    $('.type-ref').keyup(() => {
-      habilitaBtnSalarMdfe()
-    })
+    $('.type-ref').on('input keyup change', () => {
+      habilitaBtnSalarMdfe();
+    });
+    $('#mdfe_add_form').on('change dp.change', 'input, select', () => {
+      habilitaBtnSalarMdfe();
+    });
 
     $('#add-cidade').click(() => {
       let municipio = $('#municipio').val()
@@ -925,13 +934,14 @@
     })
 
     function montaHtmlCidades(call){
+      const texto = (valor) => $('<div>').text(valor == null ? '' : String(valor)).html();
       let html = '';
       CIDADESADICIONADAS.map((c) => {
         let nomeCidade = CIDADES[c];
         html += '<tr>'
-        html += '<td>'+nomeCidade+'</td>'
+        html += '<td>'+texto(nomeCidade)+'</td>'
         html += '<td>'
-        html += '<i onclick="removeCidade('+c+')" class="fa fa-trash text-danger"></i>'
+        html += '<i onclick="removeCidade('+Number(c)+')" class="fa fa-trash text-danger"></i>'
         html += '</td>'
         html += '</tr>'
       })
@@ -966,12 +976,13 @@
     })
 
     function montaHtmlUF(call){
+      const texto = (valor) => $('<div>').text(valor == null ? '' : String(valor)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       let html = '';
       PERCURSO.map((uf) => {
         html += '<tr>'
-        html += '<td>'+uf+'</td>'
+        html += '<td>'+texto(uf)+'</td>'
         html += '<td>'
-        html += '<i onclick="removeUF(\''+uf+'\')" class="fa fa-trash text-danger"></i>'
+        html += '<i onclick="removeUF('+texto(JSON.stringify(String(uf)))+')" class="fa fa-trash text-danger"></i>'
         html += '</td>'
         html += '</tr>'
       })
@@ -1011,17 +1022,13 @@
     })
 
     function montaHtmlCiot(call){
+      const texto = (valor) => $('<div>').text(valor == null ? '' : String(valor)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       let html = '';
-      CIOT.map((c) => {
-        html += '<tr>'
-        html += '<td>'+c.codigo+'</td>'
-        html += '<td>'+c.doc_ciot+'</td>'
-        html += '<td>'
-        html += '<i onclick="removeCiot(\''+c.codigo+'\')" class="fa fa-trash text-danger"></i>'
-        html += '</td>'
-        html += '</tr>'
-      })
-      call(html)
+      CIOT.forEach((c) => {
+        html += '<tr><td>'+texto(c.codigo)+'</td><td>'+texto(c.doc_ciot)+'</td>';
+        html += '<td><i onclick="removeCiot('+texto(JSON.stringify(String(c.codigo)))+')" class="fa fa-trash text-danger"></i></td></tr>';
+      });
+      call(html);
     }
 
     function removeCiot(cod){
@@ -1058,19 +1065,14 @@
     })
 
     function montaHtmlVale(call){
+      const texto = (valor) => $('<div>').text(valor == null ? '' : String(valor)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       let html = '';
-      VALES.map((c) => {
-        html += '<tr>'
-        html += '<td>'+c.cnpj_fornecedor+'</td>'
-        html += '<td>'+c.doc_pagador+'</td>'
-        html += '<td>'+c.numero_compra+'</td>'
-        html += '<td>'+c.valor+'</td>'
-        html += '<td>'
-        html += '<i onclick="removeVale(\''+c.numero_compra+'\')" class="fa fa-trash text-danger"></i>'
-        html += '</td>'
-        html += '</tr>'
-      })
-      call(html)
+      VALES.forEach((c) => {
+        html += '<tr><td>'+texto(c.cnpj_fornecedor)+'</td><td>'+texto(c.doc_pagador)+'</td>';
+        html += '<td>'+texto(c.numero_compra)+'</td><td>'+texto(c.valor)+'</td>';
+        html += '<td><i onclick="removeVale('+texto(JSON.stringify(String(c.numero_compra)))+')" class="fa fa-trash text-danger"></i></td></tr>';
+      });
+      call(html);
     }
 
     function removeVale(numero_compra){
@@ -1168,6 +1170,10 @@
 
     // add descarregamento
     $('#add-descarregamento').click(() => {
+      if (!DESCARGAS_CARREGADAS || DESCARGAS_ERRO) {
+        swal('Atenção', 'Recarregue a página para recuperar todos os documentos antes de adicionar ou salvar.', 'warning');
+        return;
+      }
       let tipo_unidade_transporte = $('#tipo_unidade_transporte').val();
       let id_unidade_transporte = $('#id_unidade_transporte').val();
       let qtd_rateio_transporte = $('#qtd_rateio_transporte').val();
@@ -1182,7 +1188,7 @@
       validaDescarregamento((valid) => {
         if(valid == ""){
           let js = {
-            rand: Math.floor(Math.random() * 1000),
+            rand: PROXIMA_DESCARGA++,
             tipo_unidade_transporte: tipo_unidade_transporte,
             id_unidade_transporte: id_unidade_transporte,
             qtd_rateio_transporte: qtd_rateio_transporte,
@@ -1211,34 +1217,47 @@
 
     function montaHtmlDescarregamento(call){
       let html = '';
-      DESCARGAS.map((d) => {
-        html += '<tr>'
-        html += '<td>'+d.tipo_unidade_transporte+'</td>'
-        html += '<td>'+d.qtd_rateio_transporte+'</td>'
-        html += '<td>'+d.chave_nfe+'</td>'
-        html += '<td>'+d.chave_cte+'</td>'
-        html += '<td>'+CIDADES[d.municipio_descarregamento]+'</td>'
-        html += '<td>'+LACRESTRANSPORTE+'</td>'
-        html += '<td>'
-        html += '<i onclick="removeDescarregamento(\''+d.rand+'\')" class="fa fa-trash text-danger"></i>'
-        html += '</td>'
-        html += '</tr>'
-      })
-      call(html)
+      const texto = (valor) => $('<div>').text(valor == null ? '' : String(valor)).html();
+      DESCARGAS.forEach((d) => {
+        html += '<tr>';
+        html += '<td>'+texto(d.tipo_unidade_transporte)+'</td>';
+        html += '<td>'+texto(d.qtd_rateio_transporte)+'</td>';
+        html += '<td>'+texto(d.chave_nfe || d.segunda_nfe)+'</td>';
+        html += '<td>'+texto(d.chave_cte || d.segunda_cte)+'</td>';
+        html += '<td>'+texto(CIDADES[d.municipio_descarregamento] || 'Município não encontrado')+'</td>';
+        html += '<td>'+texto((d.lacres_transporte || []).join(', '))+'</td>';
+        html += '<td><i onclick="removeDescarregamento('+Number(d.rand)+')" class="fa fa-trash text-danger"></i></td>';
+        html += '</tr>';
+      });
+      call(html);
     }
 
     function removeDescarregamento(rand){
-      let temp = [];
-      DESCARGAS.map((c) => {
-        if(c.rand != rand) temp.push(c)
-      })
-      DESCARGAS = temp;
-      setTimeout(() => {
-        montaHtmlDescarregamento((html) => {
-          $('#descarregamento_table tbody').html(html)
-          __set('descargas', JSON.stringify(DESCARGAS))
-        });
-      }, 300)
+      DESCARGAS = DESCARGAS.filter((d) => d.rand != rand);
+      montaHtmlDescarregamento((html) => {
+        $('#descarregamento_table tbody').html(html);
+        __set('descargas', JSON.stringify(DESCARGAS));
+      });
+    }
+
+    function validaChavesDocumentos(documento){
+      const tipos = [['chave_nfe', 'NF-e', '55'], ['chave_cte', 'CT-e', '57']];
+      for (const tipo of tipos) {
+        const chave = documento[tipo[0]] == null ? '' : String(documento[tipo[0]]);
+        if (chave === '') continue;
+        if (chave.length !== 44 || !/^[0-9]{44}$/.test(chave)) return tipo[1] + ': informe exatamente 44 dígitos numéricos, sem letras ou símbolos.';
+        if (chave.substring(20, 22) !== tipo[2]) return tipo[1] + ': a chave não corresponde ao modelo ' + tipo[2] + '.';
+        let soma = 0;
+        let peso = 2;
+        for (let i = 42; i >= 0; i--) {
+          soma += Number(chave[i]) * peso;
+          peso = peso === 9 ? 2 : peso + 1;
+        }
+        let dv = 11 - soma % 11;
+        if (dv >= 10) dv = 0;
+        if (dv !== Number(chave[43])) return tipo[1] + ': dígito verificador inválido; confira a chave original.';
+      }
+      return '';
     }
 
     function validaDescarregamento(call){
@@ -1270,15 +1289,15 @@
       if(!chave_nfe && !segunda_nfe && !chave_cte && !segunda_cte){
         msg += "Referêncie um documento\n"
       }
+      msg += validaChavesDocumentos({chave_nfe: chave_nfe, chave_cte: chave_cte});
       call(msg);
     }
 
     function habilitaBtnSalarMdfe(){
       validaFormulario((res) => {
-        if(res){
-          $('#finalizar').removeClass('disabled')
-        }
-      })
+        const habilitado = res && DESCARGAS_CARREGADAS && !DESCARGAS_ERRO;
+        $('#finalizar').prop('disabled', !habilitado).toggleClass('disabled', !habilitado);
+      });
     }
 
     function validaFormulario(call){
@@ -1317,7 +1336,19 @@
     //para edit
     $(function() {
       //iniciando munucipios
-      if($('#init_municipios').val()){
+      try {
+      const listasAnteriores = $('#old_listas').val() ? JSON.parse($('#old_listas').val()) : {};
+      const listaAnterior = (campo) => {
+        const valor = listasAnteriores[campo];
+        if (valor == null || valor === '') return [];
+        const lista = JSON.parse(valor);
+        if (!Array.isArray(lista)) throw new Error('Lista inválida: ' + campo);
+        return lista;
+      };
+      if (Object.prototype.hasOwnProperty.call(listasAnteriores, 'municipios_descarregamentos')) {
+        CIDADESADICIONADAS = listaAnterior('municipios_descarregamentos');
+        montaHtmlCidades((html) => { $('#cidades_table tbody').html(html); __set('municipios_descarregamentos', JSON.stringify(CIDADESADICIONADAS)); });
+      } else if($('#init_municipios').val()){
         let municipios = JSON.parse($('#init_municipios').val())
         municipios.map((m) => {
           console.log(m)
@@ -1331,7 +1362,10 @@
       }
 
       //iniciando percurso
-      if($('#init_percurso').val()){
+      if (Object.prototype.hasOwnProperty.call(listasAnteriores, 'percurso')) {
+        PERCURSO = listaAnterior('percurso');
+        montaHtmlUF((html) => { $('#ufs_table tbody').html(html); __set('percurso', JSON.stringify(PERCURSO)); });
+      } else if($('#init_percurso').val()){
         let percurso = JSON.parse($('#init_percurso').val())
         percurso.map((m) => {
           console.log(m)
@@ -1345,7 +1379,10 @@
       }
 
       //iniciando ciot
-      if($('#init_ciot').val()){
+      if (Object.prototype.hasOwnProperty.call(listasAnteriores, 'ciots')) {
+        CIOT = listaAnterior('ciots');
+        montaHtmlCiot((html) => { $('#ciot_table tbody').html(html); __set('ciots', JSON.stringify(CIOT)); });
+      } else if($('#init_ciot').val()){
         let ciots = JSON.parse($('#init_ciot').val())
         ciots.map((c) => {
           console.log(c)
@@ -1362,7 +1399,10 @@
         });
       }
 
-      if($('#init_vale').val()){
+      if (Object.prototype.hasOwnProperty.call(listasAnteriores, 'vales')) {
+        VALES = listaAnterior('vales');
+        montaHtmlVale((html) => { $('#vale_table tbody').html(html); __set('vales', JSON.stringify(VALES)); });
+      } else if($('#init_vale').val()){
         let vales = JSON.parse($('#init_vale').val())
         vales.map((v) => {
 
@@ -1381,43 +1421,62 @@
         });
       }
 
+      } catch (erro) {
+        DESCARGAS_ERRO = true;
+        $('#finalizar').prop('disabled', true).addClass('disabled');
+        $('#mdfe_descargas_error').prop('hidden', false).text('Não foi possível restaurar todas as listas do formulário. Recarregue a página e confira os dados antes de salvar.');
+      }
 
       // iniciando descargas
 
-      if($('#init_descargas').val()){
-        let descargas = JSON.parse($('#init_descargas').val())
-        descargas.map((v) => {
-          console.log(v)
-          preparaLacres(v.lacres_transp, (lacrestTransp) => {
-            preparaLacres(v.lacres_unid_carga, (lacrestUnidCarga) => {
-              let js = {
-                rand: Math.floor(Math.random() * 1000),
-                tipo_unidade_transporte: v.tp_unid_transp,
-                id_unidade_transporte: v.id_unid_transp,
-                qtd_rateio_transporte: v.quantidade_rateio,
-                id_unidade_carga: v.unidade_carga.id_unidade_carga,
-                qtd_rateio_unidade: v.unidade_carga.quantidade_rateio,
-                chave_nfe: v.nfe.chave,
-                segunda_nfe: v.nfe.seg_cod_barras,
-                chave_cte: v.cte ? v.cte.chave : '',
-                segunda_cte: v.cte ? v.cte.seg_cod_barras : '',
-                municipio_descarregamento: v.cidade_id,
-                lacres_transporte: lacrestTransp,
-                lacres_unidade_carga: lacrestUnidCarga,
-              }
-
-              console.log(js)
-              DESCARGAS.push(js)
-            });
-          });
-        })
-
-        montaHtmlDescarregamento((html) => {
-          $('#descarregamento_table tbody').html(html)
-          __set('descargas', JSON.stringify(DESCARGAS))
+      try {
+        const reenviadas = $('#old_descargas').val();
+        let descargas = reenviadas ? JSON.parse(reenviadas) : ($('#init_descargas').val() ? JSON.parse($('#init_descargas').val()) : []);
+        if (!Array.isArray(descargas)) throw new Error('Lista de documentos inválida');
+        // Só publicar o array e o hidden depois de converter TODOS os vínculos.
+        let carregadas = descargas.map((v, index) => {
+          if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('Documento inválido');
+          if (reenviadas) {
+            if (!Array.isArray(v.lacres_transporte) || !Array.isArray(v.lacres_unidade_carga)) throw new Error('Lacres inválidos');
+            return Object.assign({}, v, {rand: index + 1});
+          }
+          let unidade = v.unidade_carga || {};
+          let nfe = v.nfe || {};
+          let cte = v.cte || {};
+          let transporte = [];
+          let carga = [];
+          preparaLacres(v.lacres_transp, (lacres) => { transporte = lacres; });
+          preparaLacres(v.lacres_unid_carga, (lacres) => { carga = lacres; });
+          return {
+            rand: index + 1,
+            tipo_unidade_transporte: v.tp_unid_transp,
+            id_unidade_transporte: v.id_unid_transp,
+            qtd_rateio_transporte: v.quantidade_rateio,
+            id_unidade_carga: unidade.id_unidade_carga == null ? '' : unidade.id_unidade_carga,
+            qtd_rateio_unidade: unidade.quantidade_rateio == null ? '' : unidade.quantidade_rateio,
+            chave_nfe: nfe.chave == null ? '' : nfe.chave,
+            segunda_nfe: nfe.seg_cod_barras == null ? '' : nfe.seg_cod_barras,
+            chave_cte: cte.chave == null ? '' : cte.chave,
+            segunda_cte: cte.seg_cod_barras == null ? '' : cte.seg_cod_barras,
+            municipio_descarregamento: v.cidade_id,
+            lacres_transporte: transporte,
+            lacres_unidade_carga: carga,
+          };
         });
-
-
+        DESCARGAS = carregadas;
+        PROXIMA_DESCARGA = carregadas.length + 1;
+        montaHtmlDescarregamento((html) => {
+          $('#descarregamento_table tbody').html(html);
+          $('#descargas').val(JSON.stringify(DESCARGAS));
+        });
+        DESCARGAS_CARREGADAS = true;
+      } catch (erro) {
+        DESCARGAS_ERRO = true;
+        DESCARGAS_CARREGADAS = false;
+        DESCARGAS = [];
+        $('#descargas').val('');
+        $('#finalizar').prop('disabled', true).addClass('disabled');
+        $('#mdfe_descargas_error').prop('hidden', false).text('Não foi possível carregar todos os documentos. Recarregue a página; nenhuma atualização será permitida para evitar perda de dados.');
       }
       setTimeout(() => {
         habilitaBtnSalarMdfe()
@@ -1425,16 +1484,34 @@
     });
 
     function preparaLacres(objeto, call){
-      let t = [];
-      objeto.map((l) => {
-        t.push(l.numero)
-      })
-      call(t)
+      if (objeto == null) { call([]); return; }
+      if (!Array.isArray(objeto)) throw new Error('Lacres inválidos');
+      call(objeto.map((l) => {
+        if (!l || l.numero == null) throw new Error('Lacre inválido');
+        return l.numero;
+      }));
     }
 
     $(document).on('click', '#finalizar', function(e) {
       e.preventDefault();
 
+      if (!DESCARGAS_CARREGADAS || DESCARGAS_ERRO || !DESCARGAS.length) {
+        swal('Atenção', 'Os documentos não foram carregados ou a lista está vazia. Recarregue a página antes de salvar.', 'warning');
+        return;
+      }
+      for (let i = 0; i < DESCARGAS.length; i++) {
+        const documento = DESCARGAS[i];
+        if (!documento.id_unidade_carga || documento.qtd_rateio_unidade === '' || documento.qtd_rateio_unidade == null) {
+          swal('Atenção', 'Documento ' + (i + 1) + ': unidade de carga incompleta; remova e adicione o documento novamente com o ID e o rateio da unidade. A lista foi preservada.', 'warning');
+          return;
+        }
+        const erro = validaChavesDocumentos(documento);
+        if (erro) {
+          swal('Atenção', 'Documento ' + (i + 1) + ': ' + erro, 'warning');
+          return;
+        }
+      }
+      $('#descargas').val(JSON.stringify(DESCARGAS));
       $('form#mdfe_add_form').validate()
       if ($('form#mdfe_add_form').valid()) {
         $('form#mdfe_add_form').submit();

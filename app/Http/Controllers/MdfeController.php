@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use App\Models\Mdfe;
 use App\Models\Veiculo;
 use App\Utils\ModuleUtil;
@@ -307,8 +310,17 @@ class MdfeController extends Controller
 	public function store(Request $request){
 		$business_id = request()->session()->get('user.business_id');
 		$user_id = request()->session()->get('user.id');
+		try {
+			$descargas = $this->validarDescargasEdicao($request->input('descargas'));
+			$this->validarListasAuxiliares($request);
+		} catch (\Illuminate\Validation\ValidationException $e) {
+			return redirect()->back()->withInput($request->except('_token'))->with('status', [
+				'success' => false,
+				'msg' => implode(' ', \Illuminate\Support\Arr::flatten($e->errors())) . ' Nenhum dado foi alterado.'
+			]);
+		}
 		try{
-
+			return DB::transaction(function () use ($request, $business_id, $user_id, $descargas) {
 			$config = Business::find($business_id);
 
 			// Validações condicionais para pagamento (NT 2025.001)
@@ -428,7 +440,6 @@ class MdfeController extends Controller
 				}
 			}
 
-			$descargas = json_decode($request->descargas);
 			foreach($descargas as $d){
 				$info = InfoDescarga::create([
 					'mdfe_id' => $mdfe->id,
@@ -481,14 +492,13 @@ class MdfeController extends Controller
 				]);
 			}
 
-			$output = [
+			return redirect()->route('mdfe.index')->with('status', [
 				'success' => 1,
 				'msg' => "MDFe Gerada!!"
-			];
-		}catch(\Exception $e){
-
-			echo $e->getMessage();
-			die;
+			]);
+			});
+		}catch(\Throwable $e){
+			Log::error('mdfe.store.failed', ['business_id' => $business_id, 'exception_type' => get_class($e)]);
 			$output = [
 				'success' => false,
 				'msg' => "Erro ao gerar MDFe"
@@ -498,14 +508,22 @@ class MdfeController extends Controller
 		return redirect()->route('mdfe.index')->with('status', $output);
 	}
 
-	public function update(Request $request){
+	public function update(Request $request, $id){
 		$business_id = request()->session()->get('user.business_id');
 		$user_id = request()->session()->get('user.id');
+		$mdfe = Mdfe::where('business_id', $business_id)->where('id', $id)->firstOrFail();
+		try {
+			$descargas = $this->validarDescargasEdicao($request->input('descargas'));
+			$this->validarListasAuxiliares($request);
+		} catch (\Illuminate\Validation\ValidationException $e) {
+			return redirect()->back()->withInput($request->except('_token'))->with('status', [
+				'success' => false,
+				'msg' => implode(' ', \Illuminate\Support\Arr::flatten($e->errors())) . ' Nenhum dado foi alterado. Confira os documentos antes de salvar.'
+			]);
+		}
 		try{
-
+			return DB::transaction(function () use ($request, $business_id, $mdfe, $descargas) {
 			$config = Business::find($business_id);
-
-			$mdfe = Mdfe::find($request->mdfe_id);
 
 			$mdfe->uf_inicio = $request->uf_inicio;
 			$mdfe->uf_fim = $request->uf_fim;
@@ -608,7 +626,7 @@ class MdfeController extends Controller
 				}
 			}
 
-			$descargas = json_decode($request->descargas);
+			// O contrato foi validado antes de qualquer escrita; a substituição é atômica.
 			InfoDescarga::where('mdfe_id', $mdfe->id)->delete();
 			foreach($descargas as $d){
 				$info = InfoDescarga::create([
@@ -662,15 +680,13 @@ class MdfeController extends Controller
 				]);
 			}
 
-			$output = [
+			return redirect()->route('mdfe.index')->with('status', [
 				'success' => true,
 				'msg' => "MDFe atualizada!!"
-			];
-
-			
-		}catch(\Exception $e){
-
-			echo $e->getMessage();
+			]);
+			});
+		}catch(\Throwable $e){
+			Log::error('mdfe.update.failed', ['mdfe_id' => $mdfe->id, 'business_id' => $business_id, 'exception_type' => get_class($e)]);
 			$output = [
 				'success' => false,
 				'msg' => "Erro ao atualizar MDFe"
@@ -678,6 +694,99 @@ class MdfeController extends Controller
 		}
 
 		return redirect()->route('mdfe.index')->with('status', $output);
+	}
+
+	private function validarListasAuxiliares(Request $request)
+	{
+		foreach (['municipios_descarregamentos', 'percurso', 'ciots', 'vales'] as $campo) {
+			$json = $request->input($campo);
+			// Listas opcionais vazias são o formato enviado pelo formulário novo.
+			if (($json === null || $json === '') && $campo !== 'municipios_descarregamentos') {
+				continue;
+			}
+			$lista = is_string($json) ? json_decode($json) : null;
+			if (!is_array($lista) || json_last_error() !== JSON_ERROR_NONE || ($campo === 'municipios_descarregamentos' && !$lista)) {
+				throw \Illuminate\Validation\ValidationException::withMessages([$campo => 'Lista ausente ou inválida: ' . $campo . '.']);
+			}
+			foreach ($lista as $item) {
+				if ($campo === 'municipios_descarregamentos') {
+					Validator::make(['cidade' => $item], ['cidade' => 'required|integer|min:1'])->validate();
+				} elseif ($campo === 'percurso') {
+					Validator::make(['uf' => $item], ['uf' => 'required|string|in:AC,AL,AP,AM,BA,CE,DF,ES,GO,MA,MT,MS,MG,PA,PB,PR,PE,PI,RJ,RN,RS,RO,RR,SC,SP,SE,TO'])->validate();
+				} else {
+					if (!is_object($item)) {
+						throw \Illuminate\Validation\ValidationException::withMessages([$campo => 'Item inválido na lista: ' . $campo . '.']);
+					}
+					$regras = $campo === 'ciots'
+						? ['codigo' => 'required', 'doc_ciot' => 'required']
+						: ['cnpj_fornecedor' => 'required', 'doc_pagador' => 'required', 'numero_compra' => 'required', 'valor' => 'required'];
+					Validator::make((array) $item, $regras)->validate();
+				}
+			}
+		}
+	}
+
+	private function validarDescargasEdicao($json)
+	{
+		$lista = is_string($json) ? json_decode($json) : null;
+		if (!is_array($lista) || count($lista) === 0 || json_last_error() !== JSON_ERROR_NONE) {
+			throw \Illuminate\Validation\ValidationException::withMessages(['descargas' => 'Lista de documentos ausente ou inválida.']);
+		}
+		foreach ($lista as $indice => $documento) {
+			if (!is_object($documento)) {
+				throw \Illuminate\Validation\ValidationException::withMessages(['descargas' => 'Documento inválido.']);
+			}
+			// Aceitar o decimal digitado em pt-BR sem persistir vírgulas em colunas numéricas.
+			foreach (['qtd_rateio_transporte', 'qtd_rateio_unidade'] as $campo) {
+				if (isset($documento->$campo) && is_string($documento->$campo)) {
+					$documento->$campo = str_replace(',', '.', trim($documento->$campo));
+				}
+			}
+			$dados = (array) $documento;
+			Validator::make($dados, [
+				'tipo_unidade_transporte' => 'required|integer|between:1,7',
+				'id_unidade_transporte' => 'required|string|max:20',
+				'qtd_rateio_transporte' => 'required|numeric|min:0|max:999.99',
+				'id_unidade_carga' => 'required|string|max:20',
+				'qtd_rateio_unidade' => 'required|numeric|min:0|max:999.99',
+				'municipio_descarregamento' => 'required|integer|min:1',
+				'chave_nfe' => 'present|nullable|string|max:44',
+				'segunda_nfe' => 'present|nullable|string|max:44',
+				'chave_cte' => 'present|nullable|string|max:44',
+				'segunda_cte' => 'present|nullable|string|max:44',
+				'lacres_transporte' => 'present|array',
+				'lacres_unidade_carga' => 'present|array',
+				'lacres_transporte.*' => 'required|string|max:20',
+				'lacres_unidade_carga.*' => 'required|string|max:20',
+			])->validate();
+			foreach (['chave_nfe' => ['NF-e', '55'], 'chave_cte' => ['CT-e', '57']] as $campo => $tipo) {
+				$chave = $documento->$campo ?? '';
+				if ($chave === '') { continue; }
+				$erro = null;
+				if (!preg_match('/^[0-9]{44}$/D', $chave)) {
+					$erro = 'informe exatamente 44 dígitos numéricos, sem letras ou símbolos';
+				} elseif (substr($chave, 20, 2) !== $tipo[1]) {
+					$erro = 'a chave não corresponde ao modelo ' . $tipo[1];
+				} else {
+					$soma = 0;
+					$peso = 2;
+					for ($i = 42; $i >= 0; --$i) {
+						$soma += (int) $chave[$i] * $peso;
+						$peso = $peso === 9 ? 2 : $peso + 1;
+					}
+					$dv = 11 - ($soma % 11);
+					$dv = $dv >= 10 ? 0 : $dv;
+					if ($dv !== (int) $chave[43]) { $erro = 'dígito verificador inválido; confira a chave original'; }
+				}
+				if ($erro !== null) {
+					throw \Illuminate\Validation\ValidationException::withMessages(['descargas' => 'Documento ' . ($indice + 1) . ' (' . $tipo[0] . '): ' . $erro . '.']);
+				}
+			}
+			if (trim(($documento->chave_nfe ?? '') . ($documento->segunda_nfe ?? '') . ($documento->chave_cte ?? '') . ($documento->segunda_cte ?? '')) === '') {
+				throw \Illuminate\Validation\ValidationException::withMessages(['descargas' => 'Referencie um documento.']);
+			}
+		}
+		return $lista;
 	}
 
 	public function destroy($id){

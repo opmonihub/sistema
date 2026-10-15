@@ -17,6 +17,7 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Utils\ModuleUtil;
 use App\Utils\CteListQuery;
 use App\Utils\CteListPresenter;
+use App\Utils\CtePreviousDocumentValidator;
 use App\Models\System;
 use App\Models\BusinessLocation;
 
@@ -471,9 +472,22 @@ class CteController extends Controller
 		return null;
 	}
 
+	private function validarListasCte(Request $request){
+		return [
+			CtePreviousDocumentValidator::validate($request->documentos_anteriores, $request->tipo_servico ?? '0', $request->tp_cte ?? '0'),
+			CtePreviousDocumentValidator::decodeList($request->medidas, 'medidas', ['unidade_medida', 'tipo_medida', 'quantidade']),
+			CtePreviousDocumentValidator::decodeList($request->componentes, 'componentes', ['nome', 'valor']),
+		];
+	}
+
 	public function update(Request $request, $id){
 		$business_id = request()->session()->get('user.business_id');
 		$user_id = request()->session()->get('user.id');
+		try {
+			[$docsAnteriores, $medidas, $componentes] = $this->validarListasCte($request);
+		} catch (\InvalidArgumentException $e) {
+			return redirect()->back()->withInput()->with('status', ['success' => 0, 'msg' => $e->getMessage()]);
+		}
 		try{
 
 			$chaves = $request->chaves_nfe ?? '';
@@ -538,7 +552,6 @@ class CteController extends Controller
 
 			$cte->save();
 
-			$medidas = json_decode($request->medidas);
 			foreach($cte->medidas as $m){
 				$m->delete();
 			}
@@ -552,8 +565,6 @@ class CteController extends Controller
 				]);
 
 			}
-
-			$componentes = json_decode($request->componentes);
 
 			foreach($cte->componentes as $c){
 				$c->delete();
@@ -572,19 +583,14 @@ class CteController extends Controller
 			foreach($cte->documentosAnteriores as $d){
 				$d->delete();
 			}
-			if($request->documentos_anteriores){
-				$docsAnteriores = json_decode($request->documentos_anteriores);
-				if($docsAnteriores && count($docsAnteriores) > 0){
-					foreach($docsAnteriores as $doc){
-						CteDocumentoAnterior::create([
-							'cte_id' => $cte->id,
-							'chave_cte' => $doc->chave,
-							'cnpj_emitente' => $doc->cnpj ?? null,
-							'ie_emitente' => $doc->ie ?? null,
-							'uf_emitente' => $doc->uf ?? null
-						]);
-					}
-				}
+			foreach($docsAnteriores as $doc){
+				CteDocumentoAnterior::create([
+					'cte_id' => $cte->id,
+					'chave_cte' => $doc['chave'],
+					'cnpj_emitente' => $doc['cnpj'],
+					'ie_emitente' => $doc['ie'],
+					'uf_emitente' => $doc['uf']
+				]);
 			}
 
 			$output = [
@@ -608,6 +614,13 @@ class CteController extends Controller
 	public function store(Request $request){
 		$business_id = request()->session()->get('user.business_id');
 		$user_id = request()->session()->get('user.id');
+		try {
+			[$docsAnteriores, $medidas, $componentes] = $this->validarListasCte($request);
+		} catch (\InvalidArgumentException $e) {
+			// A importação é retornada por POST; voltar à URL anterior tentaria GET nessa rota.
+			$retorno = $request->_cte_xml_import === '1' ? redirect('cte/create') : redirect()->back();
+			return $retorno->withInput()->with('status', ['success' => 0, 'msg' => $e->getMessage()]);
+		}
 		try{
 
 			$chaves = $request->chaves_nfe ?? '';
@@ -672,7 +685,6 @@ class CteController extends Controller
 
 			$result = Cte::create($data);
 
-			$medidas = json_decode($request->medidas);
 		// print_r($medidas);
 			foreach($medidas as $m){
 				$medida = MedidaCte::create([
@@ -684,7 +696,6 @@ class CteController extends Controller
 
 			}
 
-			$componentes = json_decode($request->componentes);
 		// print_r($medidas);
 			foreach($componentes as $c){
 				$componente = ComponenteCte::create([
@@ -696,19 +707,14 @@ class CteController extends Controller
 			}
 
 			// Salvar documentos anteriores (para subcontratação/redespacho)
-			if($request->documentos_anteriores){
-				$docsAnteriores = json_decode($request->documentos_anteriores);
-				if($docsAnteriores && count($docsAnteriores) > 0){
-					foreach($docsAnteriores as $doc){
-						CteDocumentoAnterior::create([
-							'cte_id' => $result->id,
-							'chave_cte' => $doc->chave,
-							'cnpj_emitente' => $doc->cnpj ?? null,
-							'ie_emitente' => $doc->ie ?? null,
-							'uf_emitente' => $doc->uf ?? null
-						]);
-					}
-				}
+			foreach($docsAnteriores as $doc){
+				CteDocumentoAnterior::create([
+					'cte_id' => $result->id,
+					'chave_cte' => $doc['chave'],
+					'cnpj_emitente' => $doc['cnpj'],
+					'ie_emitente' => $doc['ie'],
+					'uf_emitente' => $doc['uf']
+				]);
 			}
 
 			$output = [

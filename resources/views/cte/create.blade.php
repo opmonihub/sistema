@@ -241,7 +241,7 @@
                         <input placeholder="Chave NFe" class="form-control type-ref" data-mask="00000000000000000000000000000000000000000000" name="chave_nfe" type="text" id="chave_nfe">
                       </div>
                     </div>
-                    <input type="hidden" id="chaves_nfe" name="chaves_nfe" value="">
+                    <input type="hidden" id="chaves_nfe" name="chaves_nfe" value="{{ old('chaves_nfe', '') }}">
                     <div class="col-md-1"><br>
                       <a id="addChave" class="btn btn-success" style="margin-top: 4px;">
                         <i class="fa fa-plus"></i>
@@ -402,7 +402,7 @@
                 </div>
               </div>
             </div>
-            <input type="hidden" name="documentos_anteriores" id="docs_anteriores" value="">
+            <input type="hidden" name="documentos_anteriores" id="docs_anteriores" value="{{ is_string(old('documentos_anteriores', '[]')) ? old('documentos_anteriores', '[]') : '[]' }}">
             <div class="table-responsive">
               <table class="table table-bordered table-striped" id="tbl-docs-anteriores">
                 <thead>
@@ -674,8 +674,8 @@
           {!! Form::text('observacao', null, ['class' => 'form-control type-ref', 'placeholder' => 'Informação Adicional' ]); !!}
         </div>
       </div>
-      <input type="hidden" name="componentes" id="comps">
-      <input type="hidden" name="medidas" id="meds">
+      <input type="hidden" name="componentes" id="comps" value="{{ is_string(old('componentes', '[]')) ? old('componentes', '[]') : '[]' }}">
+      <input type="hidden" name="medidas" id="meds" value="{{ is_string(old('medidas', '[]')) ? old('medidas', '[]') : '[]' }}">
 
       @endcomponent
     </div>
@@ -702,6 +702,41 @@
     $('#file').change(function() {
       $('#form-import').submit();
     });
+
+    // Recuperar listas completas: nunca aproveitar só os primeiros itens de um payload inválido.
+    function lerListaCte(selector, normalizar) {
+      try {
+        const lista = JSON.parse($(selector).val() || '[]');
+        if(!Array.isArray(lista)) return [];
+        return lista.map((item, index) => {
+          if(!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Item inválido');
+          return Object.assign({id: index + 1}, normalizar(item));
+        });
+      } catch(error) { return []; }
+    }
+    function campoListaCte(item, campo, alternativo) {
+      const valor = item[campo] !== undefined ? item[campo] : item[alternativo];
+      if(typeof valor !== 'string' && typeof valor !== 'number') throw new Error('Campo inválido');
+      return String(valor);
+    }
+    function recuperarListasCte() {
+      MEDIDAS = lerListaCte('#meds', item => ({
+        unidade_medida: campoListaCte(item, 'unidade_medida', 'cod_unidade'),
+        tipo_medida: campoListaCte(item, 'tipo_medida'),
+        quantidade: campoListaCte(item, 'quantidade', 'quantidade_carga')
+      }));
+      COMPONENTES = lerListaCte('#comps', item => ({nome: campoListaCte(item, 'nome'), valor: campoListaCte(item, 'valor')}));
+      DOCS_ANTERIORES = lerListaCte('#docs_anteriores', item => ({
+        chave: campoListaCte(item, 'chave', 'chave_cte'),
+        ie: campoListaCte(item, 'ie', 'ie_emitente'),
+        cnpj: campoListaCte(item, 'cnpj', 'cnpj_emitente'),
+        uf: campoListaCte(item, 'uf', 'uf_emitente')
+      }));
+      $('#prod tbody').empty().append(montaTabela());
+      $('#componentes tbody').empty().append(montaTabelaComponentes(true));
+      montaTabelaDocsAnteriores();
+    }
+    // Fim da recuperação de listas
 
     var CLIENTES = []
     var MEDIDAS = []
@@ -838,11 +873,11 @@
       (d.medidas || []).forEach(function(m, i){
         MEDIDAS.push({id: (i + 1), unidade_medida: m.unidade_medida, tipo_medida: m.tipo_medida, quantidade: m.quantidade});
       });
-      if(MEDIDAS.length) $('#prod tbody').html(montaTabela());
+      if(MEDIDAS.length) $('#prod tbody').empty().append(montaTabela());
       (d.componentes || []).forEach(function(c, i){
         COMPONENTES.push({id: (i + 1), valor: c.valor, nome: c.nome});
       });
-      if(COMPONENTES.length) $('#componentes tbody').html(montaTabelaComponentes());
+      if(COMPONENTES.length) $('#componentes tbody').empty().append(montaTabelaComponentes());
       (d.documentos_anteriores || []).forEach(function(a, i){
         DOCS_ANTERIORES.push({id: (i + 1), chave: a.chave, cnpj: a.cnpj, uf: a.uf, ie: a.ie});
       });
@@ -1066,19 +1101,19 @@
     })
 
     function montaTabelaDocsAnteriores(){
-      let html = ''
-      DOCS_ANTERIORES.map((d) => {
-        html += '<tr>'
-        html += '<td>' + d.id + '</td>'
-        html += '<td>' + d.chave + '</td>'
-        html += '<td>' + d.cnpj + '</td>'
-        html += '<td>' + (d.ie || '') + '</td>'
-        html += '<td>' + d.uf + '</td>'
-        html += '<td><a href="#!" class="btn btn-danger btn-sm" onclick="deleteDocAnterior(' + d.id + ')"><i class="fa fa-trash"></i></a></td>'
-        html += '</tr>'
-      })
-      $('#tbl-docs-anteriores tbody').html(html)
-      $('#docs_anteriores').val(JSON.stringify(DOCS_ANTERIORES))
+      let tbody = $('#tbl-docs-anteriores tbody').empty();
+      DOCS_ANTERIORES.forEach((doc) => {
+        let row = $('<tr>');
+        [doc.id, doc.chave, doc.cnpj, doc.ie || '', doc.uf].forEach((value) => {
+          row.append($('<td>').text(value));
+        });
+        let remover = $('<button type="button" class="btn btn-danger btn-sm" aria-label="Remover documento anterior">')
+          .append($('<i class="fa fa-trash">'))
+          .click(() => deleteDocAnterior(doc.id));
+        row.append($('<td>').append(remover));
+        tbody.append(row);
+      });
+      $('#docs_anteriores').val(JSON.stringify(DOCS_ANTERIORES));
     }
 
     function deleteDocAnterior(id){
@@ -1160,25 +1195,20 @@
       console.log(MEDIDAS)
 
       let t = montaTabela();
-      $('#prod tbody').html(t)
+      $('#prod tbody').empty().append(t)
     })
 
     function montaTabela(){
-      let t = ""; 
-      MEDIDAS.map((v) => {
-        t += "<tr>";
-        t += "<td>"+v.id+"</td>";
-        t += "<td>"+unidadeMedidaExibe(v.unidade_medida)+"</td>";
-        t += "<td>"+v.tipo_medida+"</td>";
-        t += "<td>"+v.quantidade+"</td>";
-        t += "<td><a href='#!' class='btn btn-danger btn-sm' onclick='deleteItem("+v.id+")'>"
-        t += "<i class='fa fa-trash'></i></a></td>";
-        t+= "</tr>";
+      const rows = MEDIDAS.map(v => {
+        const row = $('<tr>');
+        [v.id, unidadeMedidaExibe(v.unidade_medida), v.tipo_medida, v.quantidade].forEach(value => row.append($('<td>').text(value)));
+        const remover = $('<button type="button" class="btn btn-danger btn-sm" aria-label="Remover medida">')
+          .append($('<i class="fa fa-trash">')).click(() => deleteItem(v.id));
+        return row.append($('<td>').append(remover));
       });
-      $('#meds').val(JSON.stringify(MEDIDAS))
-
-      habilitaBtnSalarCTe()
-      return t;
+      $('#meds').val(JSON.stringify(MEDIDAS));
+      habilitaBtnSalarCTe();
+      return rows;
     }
 
     function deleteItem(id){
@@ -1191,7 +1221,7 @@
       MEDIDAS = temp;
       refatoreItens()
       let t = montaTabela(); 
-      $('#prod tbody').html(t)
+      $('#prod tbody').empty().append(t)
 
     }
 
@@ -1230,31 +1260,29 @@
       COMPONENTES.push({id: (COMPONENTES.length+1), valor: valor_componente,
         nome: nome_componente});
       let t = montaTabelaComponentes();
-      $('#componentes tbody').html(t)
+      $('#componentes tbody').empty().append(t)
       console.log(JSON.stringify(COMPONENTES))
       
       habilitaBtnSalarCTe();
     });
 
-    function montaTabelaComponentes(){
-      let t = ""; 
-      SOMACOMPONENTES = 0;
-      COMPONENTES.map((v) => {
-        t += "<tr>";
-        t += "<td>"+v.id+"</td>";
-        t += "<td>"+v.nome+"</td>";
-        t += "<td>"+v.valor+"</td>";
-        t += "<td><a href='#!' class='btn btn-danger btn-sm'  onclick='deleteComponente("+v.id+")'>"
-        t += "<i class='fa fa-trash'></i></a></td>";
-        t+= "</tr>";
-
-        SOMACOMPONENTES += parseFloat(String(v.valor).replace(',', '.')) || 0;
+    function montaTabelaComponentes(preservarValores){
+      let soma = 0;
+      const rows = COMPONENTES.map(v => {
+        const row = $('<tr>');
+        [v.id, v.nome, v.valor].forEach(value => row.append($('<td>').text(value)));
+        const remover = $('<button type="button" class="btn btn-danger btn-sm" aria-label="Remover componente">')
+          .append($('<i class="fa fa-trash">')).click(() => deleteComponente(v.id));
+        soma += parseFloat(String(v.valor).replace(',', '.')) || 0;
+        return row.append($('<td>').append(remover));
       });
-      $('#comps').val(JSON.stringify(COMPONENTES))
-      $('#valor_receber').val(SOMACOMPONENTES.toFixed(2).replace(',', '.'));
-      $('#valor_transporte').val(SOMACOMPONENTES.toFixed(2).replace(',', '.'));
-      habilitaBtnSalarCTe()
-      return t;
+      $('#comps').val(JSON.stringify(COMPONENTES));
+      if(!preservarValores){
+        $('#valor_receber').val(soma.toFixed(2));
+        $('#valor_transporte').val(soma.toFixed(2));
+      }
+      habilitaBtnSalarCTe();
+      return rows;
     }
 
     function deleteComponente(id){
@@ -1267,7 +1295,7 @@
       COMPONENTES = temp;
       refatoreComponentes()
       let t = montaTabelaComponentes(); 
-      $('#componentes tbody').html(t)
+      $('#componentes tbody').empty().append(t)
 
     }
 
@@ -1404,12 +1432,14 @@
 
     $(document).ready(function(){
 
-      $('#remetente_id').val('').change()
-      $('#destinatario_id').val('').change()
-      $('#recebedor_id').val('').change()
-      $('#expedidor_id').val('').change()
-
-      CLIENTES = JSON.parse($('#clientesAux').val())
+      CLIENTES = JSON.parse($('#clientesAux').val());
+      $('#remetente_id').trigger('change');
+      $('#destinatario_id').trigger('change');
+      $('#recebedor_id').trigger('change');
+      $('#expedidor_id').trigger('change');
+      recuperarListasCte();
+      CHAVES = ($('#chaves_nfe').val() || '').split(/[;,]/).filter(chave => /^[0-9]{44}$/.test(chave));
+      montaHtmlChaveNfe(html => $('#chaves_list').html(html));
 
       $('#bloco-documentos-fiscais [required], #bloco-carga [required], #div-doc-anterior [required]').attr('data-req', '1');
       initBuscaOriginal();

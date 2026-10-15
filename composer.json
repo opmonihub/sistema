@@ -68,6 +68,8 @@
         }
     },
     "scripts": {
+        "test:mdfe": "@php tests/mdfe-edit-backend.php",
+        "test:cte-documents": "@php tests/cte-previous-documents.php",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
