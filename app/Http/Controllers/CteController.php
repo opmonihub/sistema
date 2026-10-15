@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Yajra\DataTables\Facades\DataTables;
 use App\Utils\ModuleUtil;
+use App\Utils\CteListQuery;
+use App\Utils\CteListPresenter;
 use App\Models\System;
 use App\Models\BusinessLocation;
 
@@ -37,19 +39,11 @@ class CteController extends Controller
 
 		if (request()->ajax()) {
 			$business_id = request()->session()->get('user.business_id');
-			$user_id = request()->session()->get('user.id');
-			$ctes = Cte::where('business_id', $business_id)
-			->orderBy('id', 'desc')
-			->select(['id', 'cte_numero', 'valor_transporte', 'valor_receber', 'valor_carga', 'produto_predominante', 'data_previsata_entrega', 'estado', 'remetente_id', 'destinatario_id', 'created_at']);
+			$list = new CteListQuery($business_id);
+			$ctes = $list->query();
+			$table = $list->configure(Datatables::of($ctes));
 
-
-			return Datatables::of($ctes)
-
-			// ->addColumn(
-			// 	'action',
-			// 	'<a href="/cte/edit/{{$id}}" class="btn btn-xs btn-primary"><i class="glyphicon glyphicon-edit"></i> @lang("messages.edit")</a>
-			// 	&nbsp;<a href="/cte/delete/{{$id}}" class="btn btn-xs btn-danger delete_user_button"><i class="glyphicon glyphicon-trash"></i> @lang("messages.delete")</a> '
-			// )
+			return $table
 			->editColumn('data_previsata_entrega', function ($row) {
 				return \Carbon\Carbon::parse($row->data_previsata_entrega)->format('d/m/Y');
 			})
@@ -71,33 +65,38 @@ class CteController extends Controller
 			})
 
 			->addColumn('remetente', function ($row) {
-				$rem = Contact::find($row->remetente_id);
-				return $rem->name;
+				return $row->remetente_nome ?? '—';
 			})
 
 			->addColumn('destinatario', function ($row) {
-				$dest = Contact::find($row->destinatario_id);
-				return $dest->name;
+				return $row->destinatario_nome ?? '—';
+			})
+
+			->addColumn('documentos', function ($row) {
+				return CteListPresenter::documents($row, $row->documentosAnteriores);
+			})
+
+			->addColumn('cidade_destino', function ($row) {
+				return CteListPresenter::city($row->cidade_nome, $row->cidade_uf);
+			})
+
+			->addColumn('peso_kg', function ($row) {
+				return CteListPresenter::weight($row->weight_status, $row->peso_valor);
+			})
+
+			->addColumn('tomador_servico', function ($row) {
+				return CteListPresenter::taker($row->tomador, $row->tomador_nome);
 			})
 
 			->addColumn('numero_cte', function ($row) {
 				return $row->cte_numero > 0 ? $row->cte_numero : '--';
 			})
 
-			->filterColumn('numero_cte', function ($query, $keyword) {
-				$query->where('ctes.cte_numero', 'like', "%{$keyword}%");
-			})
-
-			->orderColumn('numero_cte', function ($query, $order) {
-				$query->orderBy('ctes.cte_numero', $order);
-			})
-
 			->addColumn('action', function ($row) {
-				$t = Cte::find($row->id);
 				$html = '';
 				$html = '<form id="cte'.$row['id'].'" method="POST" action="'. route('cte.destroy', $row['id']) .'">';
 
-				if($t->cte_numero > 0){
+				if($row->cte_numero > 0){
 					$html .= '<a class="btn btn-xs btn-info" href="'. route('cte.ver', $row['id']) .'">Ver CTe</a>';
 				}else{
 					$html .= '<a class="btn btn-xs btn-primary" href="'. route('cte.gerar', $row['id']) .'">Gerar CTe</a>';
@@ -112,8 +111,15 @@ class CteController extends Controller
 			})
 
 
-			->removeColumn('id')
-			->rawColumns(['action', 'remetente', 'destinatario'])
+			->only(['cte_numero', 'valor_transporte', 'valor_receber', 'valor_carga',
+				'produto_predominante', 'data_previsata_entrega', 'estado', 'created_at',
+				'remetente', 'destinatario', 'numero_cte', 'documentos', 'cidade_destino',
+				'peso_kg', 'tomador_servico', 'action'])
+			// Envelopes são texto estruturado; escapar apenas as células HTML legadas.
+			->escapeColumns(['cte_numero', 'valor_transporte', 'valor_receber', 'valor_carga',
+				'produto_predominante', 'data_previsata_entrega', 'estado', 'created_at',
+				'remetente', 'destinatario', 'numero_cte'])
+			->rawColumns(['action'])
 			->make(true);
 
 		}

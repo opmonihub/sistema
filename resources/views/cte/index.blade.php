@@ -42,7 +42,11 @@
                     <th>Data prevista de entrega</th>
                     <th>Estado</th>
                     <th>Data de Registro</th>
-                    <th>Ação</th>
+                    <th>Documentos</th>
+                    <th>Cidade Destino</th>
+                    <th>Peso KG</th>
+                    <th>Tomador do Serviço</th>
+                    <th class="cte-action">Ação</th>
                 </tr>
             </thead>
         </table>
@@ -54,40 +58,51 @@
     aria-labelledby="gridSystemModalLabel">
 </div>
 
+    @can('user.view')
+    <div class="modal fade" id="cte_documents_modal" tabindex="-1" role="dialog"
+        aria-labelledby="cte_documents_modal_title">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="cte_documents_modal_title">Documentos do CT-e</h4>
+                </div>
+                <div class="modal-body" style="overflow-wrap: anywhere;"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endcan
+
 </section>
 <!-- /.content -->
 @stop
 @section('javascript')
+<script src="{{ asset('js/cte-list.js?v=' . $asset_v) }}"></script>
 <script type="text/javascript">
-    //Roles table
-    $(document).ready( function(){
-        var users_table = $('#users_table').DataTable({
+    $(document).ready(function () {
+        var tableElement = document.getElementById('users_table');
+        if (!tableElement) {
+            return;
+        }
+
+        var users_table = $(tableElement).DataTable({
             processing: true,
             serverSide: true,
             ajax: '/cte',
-            columnDefs: [ {
-                "targets": [10],
-                "orderable": false,
-                "searchable": false
-            } ],
-            "columns":[
-            {"data":"numero_cte"},
-            {"data":"remetente"},
-            {"data":"destinatario"},
-            {"data":"valor_transporte"},
-            {"data":"valor_receber"},
-            {"data":"valor_carga"},
-            {"data":"produto_predominante"},
-            {"data":"data_previsata_entrega"},
-            {"data":"estado"},
-            {"data":"created_at"},
-            {"data":"action"}
-            ]
+            columns: CteListFrontend.buildColumns(),
+            buttons: CteListFrontend.buildButtons($.fn.dataTable.defaults.buttons)
         });
 
-        
+        var documentsModal = document.getElementById('cte_documents_modal');
+        var restoreDocumentsFocus = CteListFrontend.bindDocumentsModal(tableElement, users_table, documentsModal, function () {
+            $(documentsModal).modal('show');
+        });
+        $(documentsModal).on('hidden.bs.modal', restoreDocumentsFocus);
     });
-    
-    
 </script>
 @endsection
